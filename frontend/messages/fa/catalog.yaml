@@ -1,0 +1,33 @@
+// Persian (فارسی) ترجمه‌های زبان فارسی برای نوواShop
+
+catalog {
+  header {
+    home = "خانه"
+    shop = "فروشگاه"
+    admin = "ادمین"
+    cart = "سبد خرید"
+    login = "ورود"
+    logout = "خروج"
+  }
+
+  cart {
+    title = "سبد خرید"
+    empty = "سبد خرید شما خالی است"
+    checkout = "پرداخت"
+    subtotal = "زیرمجموعی"
+    total = "مجموعی"
+  }
+
+  product {
+    price = "قیمت"
+    addToCart = "افزودن به سبد خرید"
+    outOfStock = "موجود نیست"
+  }
+
+  forms {
+    search = "جستجو"
+    submit = "ارسال"
+    cancel = "لغو"
+    save = "ذخیره"
+  }
+}

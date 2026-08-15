@@ -1,0 +1,62 @@
+# k6 Playground Dockerfile
+# File: Dockerfile.k6-playground
+
+FROM golang:1.21-alpine AS builder
+
+# Install k6
+RUN apk add --no-cache curl wget bash git
+RUN wget -q -O /tmp/k6-linux-amd64.tar.gz https://github.com/k6io/k6/releases/download/v0.50.0/k6-v0.50.0-linux-amd64.tar.gz
+RUN tar xzf /tmp/k6-linux-amd64.tar.gz -C /tmp && mv /tmp/k6-v0.50.0-linux-amd64 /usr/local/bin/k6
+
+# Install additional k6 extensions
+RUN k6 install js
+RUN k6 install prometheus
+RUN k6 install cloud
+
+WORKDIR /workspace
+
+# Copy test files
+COPY nova-shop-load-test.js nova-shop-config.js .
+COPY k6.env.example .env
+COPY *.json .
+
+# Create test data directory
+RUN mkdir -p test-data fixtures schemas
+
+# Create scripts directory
+RUN mkdir -p scripts
+
+COPY scripts/*.js scripts/ || true
+
+# Set permissions
+RUN chmod +x *.js && chmod +x scripts/*.js || true
+
+# Create test database dump
+RUN echo "CREATE TABLE IF NOT EXISTS Products (
+  Id INT PRIMARY KEY IDENTITY(1,1),
+  Name NVARCHAR(100) NOT NULL,
+  Price DECIMAL(18,2) NOT NULL,
+  Description NVARCHAR(MAX),
+  Stock INT NOT NULL,
+  ImageUrl NVARCHAR(500)
+);" > test-data/schema.sql
+
+# Create sample data
+RUN echo "INSERT INTO Products (Name, Price, Description, Stock, ImageUrl) VALUES
+('Laptop Pro', 999.99, 'High-performance laptop', 50, 'https://example.com/laptop.jpg'),
+('Smartphone X', 699.99, 'Latest smartphone model', 100, 'https://example.com/phone.jpg'),
+('Headphones', 199.99, 'Noise-cancelling headphones', 75, 'https://example.com/headphones.jpg'),
+('Gaming Mouse', 59.99, 'Ergonomic gaming mouse', 200, 'https://example.com/mouse.jpg'),
+('Mechanical Keyboard', 149.99, 'RGB mechanical keyboard', 150, 'https://example.com/keyboard.jpg');" >> test-data/schema.sql
+
+# Create certificates for HTTPS tests
+RUN mkdir -p certs && \
+    openssl genrsa -out certs/self-signed.key 2048 && \
+    openssl req -new -x509 -key certs/self-signed.key -out certs/self-signed.crt -days 365 -subj "/CN=localhost"
+
+# Create k6 output directory
+RUN mkdir -p output reports dashboards
+
+EXPOSE 8080 2334 2335
+
+ENTRYPOINT ["k6", "run", "/workspace/nova-shop-load-test.js"]

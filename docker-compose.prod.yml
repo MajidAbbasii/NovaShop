@@ -1,0 +1,176 @@
+version: '3.8'
+
+services:
+  novashop-api-gateway:
+    build: ./backend/src/NovaShop.ApiGateway
+    ports:
+      - "5100:5100"
+    environment:
+      - ASPNETCORE_URLS=http://+:5100
+      - CONN_STRING=Server=sqlserver;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - REDIS_CONNECTION_STRING=redis:6379
+    depends_on:
+      - product-api
+      - category-api
+      - order-api
+      - cart-api
+      - wishlist-api
+      - review-api
+      - auth-api
+      - discount-api
+      - redis
+    restart: unless-stopped
+    networks:
+      - novashop-net
+
+  product-api:
+    build: ./backend/src/NovaShop.Api
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - CONNECTION_STRING=Server=sqlserver;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - REDIS_CONNECTION_STRING=redis:6379
+      - ASPNETCORE_ENVIRONMENT=Production
+      - OTEL_SERVICE_NAME=product-api
+    depends_on:
+      - sqlserver
+      - redis
+    restart: unless-stopped
+    networks:
+      - novashop-net
+
+  category-api:
+    build: ./backend/src/NovaShop.Api
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - CONNECTION_STRING=Server=sqlserver;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - ASPNETCORE_ENVIRONMENT=Production
+      - OTEL_SERVICE_NAME=category-api
+    depends_on:
+      - sqlserver
+    restart: unless-stopped
+    networks:
+      - novashop-net
+
+  order-api:
+    build: ./backend/src/NovaShop.Api
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - CONNECTION_STRING=Server=sqlserver;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - ASPNETCORE_ENVIRONMENT=Production
+      - OTEL_SERVICE_NAME=order-api
+    depends_on:
+      - sqlserver
+    restart: unless-stopped
+    networks:
+      - novashop-net
+
+  cart-api:
+    build: ./backend/src/NovaShop.Api
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - CONNECTION_STRING=Server=sqlserver;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - ASPNETCORE_ENVIRONMENT=Production
+      - OTEL_SERVICE_NAME=cart-api
+    depends_on:
+      - sqlserver
+    restart: unless-stopped
+    networks:
+      - novashop-net
+
+  wishlist-api:
+    build: ./backend/src/NovaShop.Api
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - CONNECTION_STRING=Server=sqlserver;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - ASPNETCORE_ENVIRONMENT=Production
+      - OTEL_SERVICE_NAME=wishlist-api
+    depends_on:
+      - sqlserver
+    restart: unless-stopped
+    networks:
+      - novashop-net
+
+  review-api:
+    build: ./backend/src/NovaShop.Api
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - CONNECTION_STRING=Server=sqlserver;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - ASPNETCORE_ENVIRONMENT=Production
+      - OTEL_SERVICE_NAME=review-api
+    depends_on:
+      - sqlserver
+    restart: unless-stopped
+    networks:
+      - novashop-net
+
+  auth-api:
+    build: ./backend/src/NovaShop.Api
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - CONNECTION_STRING=Server=sqlserver;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - ASPNETCORE_ENVIRONMENT=Production
+      - OTEL_SERVICE_NAME=auth-api
+    depends_on:
+      - sqlserver
+    restart: unless-stopped
+    networks:
+      - novashop-net
+
+  discount-api:
+    build: ./backend/src/NovaShop.Api
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - CONNECTION_STRING=Server=sqlserver;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - ASPNETCORE_ENVIRONMENT=Production
+      - OTEL_SERVICE_NAME=discount-api
+    depends_on:
+      - sqlserver
+    restart: unless-stopped
+    networks:
+      - novashop-net
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong!Passw0rd
+      - MSSQL_PID=Express
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - novashop-net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - novashop-net
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend/build:/usr/share/nginx/html:ro
+    depends_on:
+      - novashop-api-gateway
+    restart: unless-stopped
+    networks:
+      - novashop-net
+
+volumes:
+  sqlserver_data:
+  redis_data:
+
+networks:
+  novashop-net:
+    driver: bridge

@@ -1,0 +1,196 @@
+# Docker Compose for NovaShop API Gateway
+version: '3.8'
+
+services:
+  # NovaShop API Gateway Service
+  novashop-api-gateway:
+    build:
+      context: ./src/NovaShop.ApiGateway
+    ports:
+      - "5100:5100"
+      - "8080:8080" # Optional additional port for rich metrics
+    environment:
+      - ASPNETCORE_URLS=http://+:5100
+      - CONN_STRING=Server=localhost;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - REDIS_CONNECTION_STRING=redis:6379
+    depends_on:
+      - product-api
+      - category-api
+      - order-api
+      - cart-api
+      - wishlist-api
+      - review-api
+      - auth-api
+      - discount-api
+      - redis
+    restart: unless-stopped
+    networks:
+      - novashop-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5100/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Product API Service
+  product-api:
+    build:
+      context: ./src/NovaShop.Api
+    ports:
+      - "5001:80"
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - CONNECTION_STRING=Server=localhost;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - REDIS_CONNECTION_STRING=redis:6379
+    depends_on:
+      - sqlserver
+      - redis
+    restart: unless-stopped
+    networks:
+      - novashop-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Category API Service
+  category-api:
+    build:
+      context: ./src/NovaShop.Api
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - CONNECTION_STRING=Server=localhost;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+    depends_on:
+      - sqlserver
+    restart: unless-stopped
+    networks:
+      - novashop-net
+
+  # Order API Service
+  order-api:
+    build:
+      context: ./src/NovaShop.Api
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - CONNECTION_STRING=Server=localhost;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+    depends_on:
+      - sqlserver
+    restart: unless-stopped
+    networks:
+      - novashop-net
+
+  # Cart API Service
+  cart-api:
+    build:
+      context: ./src/NovaShop.Api
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - CONNECTION_STRING=Server=localhost;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+    depends_on:
+      - sqlserver
+    restart: unless-stopped
+    networks:
+      - novashop-net
+
+  # Wishlist API Service
+  wishlist-api:
+    build:
+      context: ./src/NovaShop.Api
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - CONNECTION_STRING=Server=localhost;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+    depends_on:
+      - sqlserver
+    restart: unless-stopped
+    networks:
+      - novashop-net
+
+  # Review API Service
+  review-api:
+    build:
+      context: ./src/NovaShop.Api
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - CONNECTION_STRING=Server=localhost;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+    depends_on:
+      - sqlserver
+    restart: unless-stopped
+    networks:
+      - novashop-net
+
+  # Auth API Service
+  auth-api:
+    build:
+      context: ./src/NovaShop.Api
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - CONNECTION_STRING=Server=localhost;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+    depends_on:
+      - sqlserver
+    restart: unless-stopped
+    networks:
+      - novashop-net
+
+  # Discount API Service
+  discount-api:
+    build:
+      context: ./src/NovaShop.Api
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - CONNECTION_STRING=Server=localhost;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+    depends_on:
+      - sqlserver
+    restart: unless-stopped
+    networks:
+      - novashop-net
+
+  # SQL Server Database
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong!Passw0rd
+      - MSSQL_PID=Express
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - novashop-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/opt/mssql/tools/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "YourStrong!Passw0rd", "-Q", "SELECT 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - novashop-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  sqlserver_data:
+  redis_data:
+
+networks:
+  novashop-net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1500

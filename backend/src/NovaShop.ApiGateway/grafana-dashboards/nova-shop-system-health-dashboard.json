@@ -1,0 +1,230 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "nova-shop-system-health",
+    "title": "NovaShop System Health",
+    "tags": ["nova-shop", "system", "health"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "CPU Usage",
+        "type": "stat",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
+        "targets": [
+          {
+            "expr": "(100 - (100 * node_cpu_seconds_total{mode='idle'} / (time() - node_cpu_seconds_total{mode='idle'}))) * 100",
+            "legendFormat": "CPU Usage - {{ instance }}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "%"
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "auto"
+        }
+      },
+      {
+        "id": 2,
+        "title": "Memory Usage",
+        "type": "stat",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        },
+        "targets": [
+          {
+            "expr": "sum(node_memory_MemAvailable_bytes) / sum(node_memory_MemTotal_bytes) * 100",
+            "legendFormat": "Memory Usage - {{ instance }}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "%"
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "auto"
+        }
+      },
+      {
+        "id": 3,
+        "title": "Disk Space",
+        "type": "stat",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 0,
+          "y": 8
+        },
+        "targets": [
+          {
+            "expr": "node_filesystem_free_bytes{mountpoint='/'} / node_filesystem_size_bytes{mountpoint='/'} * 100",
+            "legendFormat": "Root FS - {{ instance }}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "%"
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "auto"
+        }
+      },
+      {
+        "id": 4,
+        "title": "Network I/O",
+        "type": "stat",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 8,
+          "y": 8
+        },
+        "targets": [
+          {
+            "expr": "rate(node_network_receive_bytes_total{instance='novashop-api'}[5m]) / 1024 / 1024",
+            "legendFormat": "Network In - {{ instance }} MB/s",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(node_network_transmit_bytes_total{instance='novashop-api'}[5m]) / 1024 / 1024",
+            "legendFormat": "Network Out - {{ instance }} MB/s",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "MBps"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Database Connections",
+        "type": "stat",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 0,
+          "y": 16
+        },
+        "targets": [
+          {
+            "expr": "sqlserver_connections",
+            "legendFormat": "SQL Server - {{ name }}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Redis Memory Usage",
+        "type": "stat",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 8,
+          "y": 16
+        },
+        "targets": [
+          {
+            "expr": "redis_memory_used_bytes / redis_memory_max_bytes * 100",
+            "legendFormat": "Redis Memory - {{ instance }}%",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "%"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Container Statistics",
+        "type": "stat",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 16,
+          "y": 16
+        },
+        "targets": [
+          {
+            "expr": "count by (instance) (up)",
+            "legendFormat": "{{ instance }} - {{ $value }} containers",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Service Health Summary",
+        "type": "table",
+        "gridPos": {
+          "h": 8,
+          "w": 16,
+          "x": 0,
+          "y": 24
+        },
+        "targets": [
+          {
+            "expr": "up",
+            "format": "table",
+            "refId": "A",
+            "showExpr": false
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              }
+            }
+          }
+        },
+        "options": {
+          "showTableToggle": true,
+          "verticalAlign": "middle"
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s"
+  },
+  "overwrite": true
+}

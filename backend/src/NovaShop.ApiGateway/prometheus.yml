@@ -1,0 +1,370 @@
+# NovaShop Monitoring Infrastructure Configuration
+# Complete setup for Prometheus, Grafana, and OpenTelemetry
+
+# ===============================================================================
+# PROMETHEUS CONFIGURATION
+# ===============================================================================
+
+# Prometheus server configuration
+apiVersion: 0.1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        monitor: 'novashop-monitor'
+
+    # Alert manager configuration
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+              - alertmanager:9093
+
+    # Load rule files
+    rule_files:
+      - "/etc/prometheus/rules/*.yml"
+      - "/etc/prometheus/alerts/*.yml"
+
+    # Scrape configurations
+    scrape_configs:
+      # NovaShop API Gateway
+      - job_name: 'novashop-api-gateway'
+        static_configs:
+          - targets: ['novashop-api-gateway:5100']
+        honor_labels: true
+        metrics_path: /metrics
+        scrape_interval: 15s
+        scrape_timeout: 10s
+        http_sd_configs:
+          - url: http://novashop-api-gateway:5100/api/v1/targets
+            refresh_interval: 30s
+
+      # Product API Service
+      - job_name: 'product-api'
+        static_configs:
+          - targets: ['product-api:80']
+        honor_labels: true
+        metrics_path: /metrics
+        scrape_interval: 15s
+        scrape_timeout: 10s
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            target_label: service
+            replacement: product-api
+
+      # Category API Service
+      - job_name: 'category-api'
+        static_configs:
+          - targets: ['category-api:80']
+        honor_labels: true
+        metrics_path: /metrics
+        scrape_interval: 15s
+
+      # Order API Service
+      - job_name: 'order-api'
+        static_configs:
+          - targets: ['order-api:80']
+        honor_labels: true
+        metrics_path: /metrics
+        scrape_interval: 15s
+
+      # Cart API Service
+      - job_name: 'cart-api'
+        static_configs:
+          - targets: ['cart-api:80']
+        honor_labels: true
+        metrics_path: /metrics
+        scrape_interval: 15s
+
+      # Wishlist API Service
+      - job_name: 'wishlist-api'
+        static_configs:
+          - targets: ['wishlist-api:80']
+        honor_labels: true
+        metrics_path: /metrics
+        scrape_interval: 15s
+
+      # Review API Service
+      - job_name: 'review-api'
+        static_configs:
+          - targets: ['review-api:80']
+        honor_labels: true
+        metrics_path: /metrics
+        scrape_interval: 15s
+
+      # Auth API Service
+      - job_name: 'auth-api'
+        static_configs:
+          - targets: ['auth-api:80']
+        honor_labels: true
+        metrics_path: /metrics
+        scrape_interval: 15s
+
+      # Discount API Service
+      - job_name: 'discount-api'
+        static_configs:
+          - targets: ['discount-api:80']
+        honor_labels: true
+        metrics_path: /metrics
+        scrape_interval: 15s
+
+      # SQL Server Database
+      - job_name: 'sqlserver'
+        static_configs:
+          - targets: ['sqlserver:1433']
+        honor_labels: true
+        metrics_path: /metrics
+        scrape_interval: 15s
+        params:
+          collect.db.name: ['NovaShopDb']
+
+      # Redis Cache
+      - job_name: 'redis'
+        static_configs:
+          - targets: ['redis:6379']
+        honor_labels: true
+        metrics_path: /metrics
+        scrape_interval: 15s
+
+      # Node Exporter for system metrics
+      - job_name: 'node-exporter'
+        static_configs:
+          - targets: ['node-exporter:9100']
+        honor_labels: true
+        scrape_interval: 15s
+
+      # OpenTelemetry Collector
+      - job_name: 'otel-collector'
+        static_configs:
+          - targets: ['otel-collector:4318']
+        honor_labels: true
+        metrics_path: /metrics
+        scrape_interval: 15s
+
+      # cAdvisor for container metrics
+      - job_name: 'cadvisor'
+        static_configs:
+          - targets: ['cadvisor:8080']
+        honor_labels: true
+        scrape_interval: 15s
+
+    # Remote write configuration for long-term storage
+    remote_write:
+      - url: 'http://victoria-metrics:8428/api/v1/write'
+        queue_config:
+          max_samples_per_send: 500
+          max_backoff: 5m
+
+# Alert configuration
+---
+apiVersion: 0.1
+kind: ConfigMap
+metadata:
+  name: prometheus-alerts
+  namespace: monitoring
+data:
+  alerts.yml: |
+    groups:
+      - name: novashop-alerts
+        rules:
+          - alert: HighErrorRate
+            expr: rate(http_requests_total{status="5xx"}[5m]) > 0.05
+            for: 2m
+            labels:
+              severity: critical
+              team: "backend"
+            annotations:
+              summary: "High error rate detected"
+              description: "Error rate is {{ $value | humanizePercentage }} over the last 2 minutes"
+
+          - alert: HighResponseTime
+            expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1.0
+            for: 5m
+            labels:
+              severity: warning
+              team: "backend"
+            annotations:
+              summary: "High response time detected"
+              description: "95th percentile response time is {{ $value }}s"
+
+          - alert: ServiceDown
+            expr: up == 0
+            for: 1m
+            labels:
+              severity: critical
+              team: "backend"
+            annotations:
+              summary: "Service is down"
+              description: "Service {{ $labels.job }} has been down for more than 1 minute"
+
+          - alert: MemoryUsageHigh
+            expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.8
+            for: 10m
+            labels:
+              severity: warning
+              team: "infrastructure"
+            annotations:
+              summary: "High memory usage"
+              description: "Memory usage is {{ $value | humanizePercentage }}"
+
+          - alert: CPUUsageHigh
+            expr: (100 - (100 * node_cpu_seconds_total{mode="idle"} / (time() - node_cpu_seconds_total{mode="idle"}))) > 80
+            for: 5m
+            labels:
+              severity: warning
+              team: "infrastructure"
+            annotations:
+              summary: "High CPU usage"
+              description: "CPU usage is {{ $value }}%"
+
+# Recording rules
+---
+apiVersion: 0.1
+kind: ConfigMap
+metadata:
+  name: prometheus-recording-rules
+  namespace: monitoring
+data:
+  recording_rules.yml: |
+    groups:
+      - name: novashop-recording-rules
+        rules:
+          - record: job_http_requests_total
+            expr: sum(rate(http_requests_total[5m])) by (job, method, status_code)
+
+          - record: job_http_request_duration_seconds
+            expr: sum(rate(http_request_duration_seconds[5m])) by (job, le)
+
+          - record: node_memory_usage_bytes
+            expr: sum(node_memory_Bytes) by (instance)
+
+          - record: node_cpu_usage_percentage
+            expr: (100 - (100 * node_cpu_seconds_total{mode="idle"} / (time() - node_cpu_seconds_total{mode="idle"}))) * 100
+
+# PromQL queries for Grafana dashboards
+---
+apiVersion: 0.1
+kind: ConfigMap
+metadata:
+  name: prometheus-queries
+  namespace: monitoring
+data:
+  api-performance-queries.yml: |
+    api_endpoints:
+      - name: "Product API"
+        query: "sum(rate(http_requests_total{job='product-api'}[5m])) by (http_method, status_code)"
+        legend: "{{ http_method }} {{ status_code }}"
+        y-axis: "req/sec"
+
+      - name: "Auth API"
+        query: "sum(rate(http_requests_total{job='auth-api'}[5m])) by (http_method, status_code)"
+        legend: "{{ http_method }} {{ status_code }}"
+        y-axis: "req/sec"
+
+    response_times:
+      - name: "Product API P95"
+        query: "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job='product-api'}[5m])) * 1000"
+        legend: "P95 - {{ $value | humanize }}ms"
+        y-axis: "ms"
+
+      - name: "Auth API P95"
+        query: "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job='auth-api'}[5m])) * 1000"
+        legend: "P95 - {{ $value | humanize }}ms"
+        y-axis: "ms"
+
+    error_rates:
+      - name: "Error Rate - Product API"
+        query: "rate(http_requests_total{job='product-api', status_code=~'5[0-9][0-9]'}[5m]) / rate(http_requests_total{job='product-api'}[5m])"
+        legend: "Error Rate - {{ $value | humanizePercentage }}"
+        y-axis: "%"
+
+    throughput:
+      - name: "Total Requests"
+        query: "sum(rate(http_requests_total[5m]))"
+        legend: "Total - {{ $value | humanize }} req/sec"
+        y-axis: "req/sec"
+
+  system-health-queries.yml: |
+    cpu_utilization:
+      - name: "CPU Usage - All Nodes"
+        query: "100 - (100 * node_cpu_seconds_total{mode='idle'} / (time() - node_cpu_seconds_total{mode='idle'}))"
+        legend: "{{ instance }} - {{ $value | humanize }}%"
+        y-axis: "%"
+
+    memory_usage:
+      - name: "Memory Usage - All Nodes"
+        query: "sum(node_memory_MemAvailable_bytes) by (instance) / sum(node_memory_MemTotal_bytes) by (instance) * 100"
+        legend: "{{ instance }} - {{ $value | humanize }}%"
+        y-axis: "%"
+
+    database_connections:
+      - name: "SQL Server Connections"
+        query: "sqlserver_connections"
+        legend: "{{ name }} - {{ $value }}"
+        y-axis: "connections"
+
+    redis_memory:
+      - name: "Redis Memory Usage"
+        query: "redis_memory_used_bytes / redis_memory_max_bytes * 100"
+        legend: "{{ instance }} - {{ $value | humanize }}%"
+        y-axis: "%"
+
+  business-metrics-queries.yml: |
+    orders_per_day:
+      - name: "Orders Created (Last 24h)"
+        query: "sum(count_over_time(orders_created_total[24h]))"
+        legend: "{{ $value }} orders"
+        y-axis: "orders"
+
+    revenue:
+      - name: "Revenue (Last 24h)"
+        query: "sum(revenue_total{period='daily'}[24h])"
+        legend: "${{ $value | humanize }}"
+        y-axis: "USD"
+
+    active_users:
+      - name: "Active Users (Last Hour)"
+        query: "sum(rate(active_users_total[1h]))"
+        legend: "{{ $value | humanize }} users"
+        y-axis: "users"
+
+    cart_operations:
+      - name: "Cart Operations (Last Hour)"
+        query: "sum(rate(cart_operations_total[1h])) by (operation_type)"
+        legend: "{{ operation_type }} - {{ $value | humanize }}"
+        y-axis: "operations"
+
+# Service discovery configuration for Prometheus
+---
+apiVersion: 0.1
+kind: ConfigMap
+metadata:
+  name: prometheus-service-discovery
+  namespace: monitoring
+data:
+  service-discovery.yml: |
+    # Target discovery for NovaShop microservices
+    - job_name: 'novashop-service-discovery'
+      ec2_sd_configs:
+        - region: 'us-east-1'
+          port: 80
+          filters:
+            tag: 'Environment:Production'
+            tag: 'App:nova-shop'
+      refresh_interval: 5m
+
+    # Kubernetes service discovery
+    - job_name: 'k8s-service-discovery'
+      kubernetes_sd_configs:
+        - role: node
+      refresh_interval: 30s
+      relabel_configs:
+        - source_labels: [__meta_kubernetes_node_label_app]
+          action: keep
+          regex: 'nova-shop'

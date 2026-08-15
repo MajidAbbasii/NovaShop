@@ -1,0 +1,237 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "nova-shop-business-metrics",
+    "title": "NovaShop Business Metrics",
+    "tags": ["nova-shop", "business", "metrics"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Orders Today",
+        "type": "stat",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 0,
+          "y": 0
+        },
+        "targets": [
+          {
+            "expr": "sum(increase(orders_created_total[24h]))",
+            "legendFormat": "{{ $value | humanize }} orders",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "auto"
+        }
+      },
+      {
+        "id": 2,
+        "title": "Revenue Today",
+        "type": "stat",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 8,
+          "y": 0
+        },
+        "targets": [
+          {
+            "expr": "sum(increase(revenue_total[24h]))",
+            "legendFormat": "${{ $value | humanize }}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "USD"
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "auto"
+        }
+      },
+      {
+        "id": 3,
+        "title": "Average Order Value",
+        "type": "stat",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 16,
+          "y": 0
+        },
+        "targets": [
+          {
+            "expr": "sum(increase(revenue_total[24h])) / sum(increase(orders_created_total[24h]))",
+            "legendFormat": "${{ $value | humanize }}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "USD"
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "auto"
+        }
+      },
+      {
+        "id": 4,
+        "title": "Active Users",
+        "type": "stat",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 0,
+          "y": 8
+        },
+        "targets": [
+          {
+            "expr": "sum(rate(active_users_total[5m]))",
+            "legendFormat": "{{ $value | humanize }} users",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Cart Operations",
+        "type": "stat",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 8,
+          "y": 8
+        },
+        "targets": [
+          {
+            "expr": "sum(increase(cart_operations_total[24h])) by (operation_type)",
+            "legendFormat": "{{ operation_type }} - {{ $value | humanize }}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Product Views",
+        "type": "stat",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 16,
+          "y": 8
+        },
+        "targets": [
+          {
+            "expr": "sum(increase(product_views_total[24h]))",
+            "legendFormat": "{{ $value | humanize }} views",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Orders Over Time",
+        "type": "graph",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        },
+        "targets": [
+          {
+            "expr": "sum(increase(orders_created_total[1h]))",
+            "legendFormat": "{{ $value | humanize }} orders",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps"
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Revenue Trend",
+        "type": "graph",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        },
+        "targets": [
+          {
+            "expr": "sum(increase(revenue_total[1h]))",
+            "legendFormat": "${{ $value | humanize }}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "USD"
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Top Selling Products",
+        "type": "table",
+        "gridPos": {
+          "h": 8,
+          "w": 16,
+          "x": 0,
+          "y": 24
+        },
+        "targets": [
+          {
+            "expr": "topk(10, sum(increase(product_purchases_total[24h])) by (product_id))",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-7d",
+      "to": "now"
+    },
+    "refresh": "30s"
+  },
+  "overwrite": true
+}

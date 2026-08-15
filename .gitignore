@@ -1,0 +1,94 @@
+######################
+# .NET
+######################
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+*.pidb
+*.vspscc
+*.vssscc
+*.meta
+
+######################
+# Node
+######################
+node_modules/
+.next/
+build/
+coverage/
+.nyc_output/
+.npm/
+
+######################
+# Python
+######################
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+.eggs/
+*.egg
+.Python
+
+######################
+# Logs
+######################
+*.log
+*.log.*
+logs/
+Log/
+Logs/
+crash.log
+
+######################
+# Environment / secrets
+######################
+.env
+.env.*
+!.env.example
+!.env.k6.example
+!.k6.env.example
+
+######################
+# IDE
+######################
+.idea/
+*.swp
+*.swo
+*~
+
+######################
+# Playwright / E2E artifacts
+######################
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+.playwright-mcp/
+/playwright-report/
+/test-results/
+
+######################
+# OS
+######################
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+######################
+# Temporary / backup
+######################
+*.tmp
+*.temp
+*.bak
+*.old
+*.orig
+*.backup
+stackdump
+*.stackdump

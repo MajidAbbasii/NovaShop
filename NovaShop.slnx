@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/backend/" />
+  <Folder Name="/backend/src/">
+    <Project Path="backend/src/NovaShop.Api/NovaShop.Api.csproj" />
+    <Project Path="backend/src/NovaShop.ApiGateway/NovaShop.ApiGateway.csproj" />
+    <Project Path="backend/src/NovaShop.Application/NovaShop.Application.csproj" />
+    <Project Path="backend/src/NovaShop.Benchmark/NovaShop.Benchmark/NovaShop.Benchmarks.csproj" Id="77868a7b-3413-46da-9a13-86b4936125e3" />
+    <Project Path="backend/src/NovaShop.Common/NovaShop.Common.csproj" />
+    <Project Path="backend/src/NovaShop.Domain/NovaShop.Domain.csproj" />
+    <Project Path="backend/src/NovaShop.Infrastructure/NovaShop.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/backend/tests/">
+    <Project Path="backend/tests/NovaShop.Tests/NovaShop.Tests.csproj" />
+  </Folder>
+</Solution>

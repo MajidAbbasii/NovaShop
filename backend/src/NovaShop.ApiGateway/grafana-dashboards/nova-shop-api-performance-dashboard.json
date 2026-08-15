@@ -1,0 +1,257 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "nova-shop-api-performance",
+    "title": "NovaShop API Performance",
+    "tags": ["nova-shop", "api", "performance"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Request Rate by Endpoint",
+        "type": "stat",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 500 },
+                { "color": "red", "value": 1000 }
+              ]
+            },
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              }
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "auto"
+        },
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{job=~'(product-api|auth-api|order-api|cart-api)'}[5m])) by (job, http_method)",
+            "legendFormat": "{{http_method}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "req/s"
+          }
+        },
+        "plugins": []
+      },
+      {
+        "id": 2,
+        "title": "Response Time (P95)",
+        "type": "stat",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 500 },
+                { "color": "red", "value": 1000 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "auto"
+        },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job='product-api'}[5m])) * 1000",
+            "legendFormat": "Product API",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job='auth-api'}[5m])) * 1000",
+            "legendFormat": "Auth API",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job='order-api'}[5m])) * 1000",
+            "legendFormat": "Order API",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Error Rate by Service",
+        "type": "stat",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 0,
+          "y": 8
+        },
+        "targets": [
+          {
+            "expr": "(rate(http_requests_total{job='product-api', status_code=~'5[0-9][0-9]'}[5m]) / rate(http_requests_total{job='product-api'}[5m])) * 100",
+            "legendFormat": "Product API - {{ $value | humanizePercentage }}",
+            "refId": "A"
+          },
+          {
+            "expr": "(rate(http_requests_total{job='auth-api', status_code=~'5[0-9][0-9]'}[5m]) / rate(http_requests_total{job='auth-api'}[5m])) * 100",
+            "legendFormat": "Auth API - {{ $value | humanizePercentage }}",
+            "refId": "B"
+          },
+          {
+            "expr": "(rate(http_requests_total{job='order-api', status_code=~'5[0-9][0-9]'}[5m]) / rate(http_requests_total{job='order-api'}[5m])) * 100",
+            "legendFormat": "Order API - {{ $value | humanizePercentage }}",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "%"
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "auto"
+        }
+      },
+      {
+        "id": 4,
+        "title": "HTTP Status Codes",
+        "type": "heatmap",
+        "gridPos": {
+          "h": 8,
+          "w": 16,
+          "x": 8,
+          "y": 8
+        },
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total[5m])) by (status_code)",
+            "legendFormat": "{{status_code}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 400 },
+                { "color": "red", "value": 500 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "calculate": "mean",
+            "values": false
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Active Connections",
+        "type": "stat",
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 0,
+          "y": 16
+        },
+        "targets": [
+          {
+            "expr": "sum(http_requests_active)",
+            "legendFormat": "Active Connections",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Requests per Minute Trend",
+        "type": "graph",
+        "gridPos": {
+          "h": 8,
+          "w": 16,
+          "x": 8,
+          "y": 16
+        },
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total[1m]))",
+            "legendFormat": "Total Requests",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(rate(http_requests_total{status_code='200'}[1m]))",
+            "legendFormat": "Success (200)",
+            "refId": "B"
+          },
+          {
+            "expr": "sum(rate(http_requests_total{status_code=~'5[0-9][0-9]'}[1m]))",
+            "legendFormat": "Errors (5xx)",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps"
+          }
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s"
+  },
+  "overwrite": true
+}
