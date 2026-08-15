@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using NovaShop.Domain.Entities;
 using NovaShop.Application.Features.Products.Commands;
 using NovaShop.Application.Features.Reviews.Commands;
 using NovaShop.Application.Features.Reviews.Dtos;

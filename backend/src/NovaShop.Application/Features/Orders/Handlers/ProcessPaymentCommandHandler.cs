@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NovaShop.Application.Features.Orders.Commands;
 using NovaShop.Application.Features.Orders.Dtos;
-using NovaShop.Application.Messages;
 using NovaShop.Application.Services;
 using NovaShop.Domain.Entities;
 using NovaShop.Domain.Services;

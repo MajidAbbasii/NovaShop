@@ -1,7 +1,6 @@
 using MediatR;
 using NovaShop.Application.Features.Discounts.Commands;
 using NovaShop.Application.Features.Discounts.Queries;
-using NovaShop.Infrastructure.Data;
 namespace NovaShop.Api.Endpoints;
 
 public static class DiscountsEndpoints

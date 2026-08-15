@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NovaShop.Application.Features.Orders.Commands;
-using NovaShop.Application.Features.Orders.Queries;
 using NovaShop.Infrastructure.Services;
 
 namespace NovaShop.Api.Endpoints;

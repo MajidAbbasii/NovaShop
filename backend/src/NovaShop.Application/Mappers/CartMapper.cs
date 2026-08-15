@@ -1,7 +1,6 @@
 using NovaShop.Application.Features.Carts.Dtos;
 using NovaShop.Domain.Entities;
 using Riok.Mapperly.Abstractions;
-using System.Linq;
 
 namespace NovaShop.Application.Mappers;
 

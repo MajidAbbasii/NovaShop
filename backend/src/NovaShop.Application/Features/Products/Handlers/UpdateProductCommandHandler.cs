@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using NovaShop.Application.Caching;
 using NovaShop.Application.Features.Products.Commands;
 using NovaShop.Domain.Entities;

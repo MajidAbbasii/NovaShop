@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using NovaShop.Domain.Entities;
 using NovaShop.Application.Features.Auth.Commands;
 using Xunit;
 using FluentAssertions;

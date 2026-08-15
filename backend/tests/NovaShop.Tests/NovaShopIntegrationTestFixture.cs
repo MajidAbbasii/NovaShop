@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Moq;
 using NovaShop.Domain.Services;
 using NovaShop.Infrastructure.Data;
-using NovaShop.Domain.Entities;
 using Testcontainers.MsSql;
 using Testcontainers.Redis;
 using Xunit;

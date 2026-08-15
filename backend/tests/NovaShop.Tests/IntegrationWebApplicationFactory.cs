@@ -1,11 +1,9 @@
-using MediatR;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using NovaShop.Api;
 using NovaShop.Api.Extensions;
 using NovaShop.Domain.Entities;
 using NovaShop.Domain.Services;

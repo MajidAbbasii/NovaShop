@@ -1,5 +1,3 @@
-using System.Linq;
-
 namespace NovaShop.Domain.Entities;
 
 public class Cart

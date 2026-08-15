@@ -1,4 +1,3 @@
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NovaShop.Application.Features.Orders.Dtos;
 using NovaShop.Infrastructure.Data;

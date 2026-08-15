@@ -1,9 +1,6 @@
 using MediatR;
-using Microsoft.AspNetCore.Mvc;
 using NovaShop.Application.Features.Orders.Commands;
 using NovaShop.Application.Features.Orders.Dtos;
-using NovaShop.Application.Features.Orders.Queries;
-using NovaShop.Application.Mappers;
 using Microsoft.EntityFrameworkCore;
 using NovaShop.Common.Models;
 using NovaShop.Infrastructure.Data;

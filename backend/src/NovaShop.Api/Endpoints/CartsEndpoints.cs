@@ -1,7 +1,6 @@
 using MediatR;
 using NovaShop.Application.Features.Carts.Commands;
 using NovaShop.Application.Features.Carts.Queries;
-using NovaShop.Application.Features.Carts.Dtos;
 using System.Security.Claims;
 
 namespace NovaShop.Api.Endpoints;

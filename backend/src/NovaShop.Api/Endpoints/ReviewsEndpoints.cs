@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using MediatR;
-using Microsoft.AspNetCore.Http;
 using NovaShop.Application.Features.Reviews.Commands;
 using NovaShop.Application.Features.Reviews.Queries;
 

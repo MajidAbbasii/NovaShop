@@ -1,5 +1,3 @@
-using System.Data;
-using Dapper;
 using MediatR;
 using NovaShop.Application.Features.Products.Dtos;
 

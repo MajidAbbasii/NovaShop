@@ -1,12 +1,9 @@
 using MassTransit;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using NovaShop.Application.Features.Orders.Commands;
-using NovaShop.Application.Mappers;
 using NovaShop.Application.Messages;
 using NovaShop.Domain.Entities;
 using NovaShop.Domain.Repositories;
-using NovaShop.Infrastructure.Data;
 
 namespace NovaShop.Application.Features.Orders.Handlers;
 

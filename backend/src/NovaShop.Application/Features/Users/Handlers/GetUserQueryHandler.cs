@@ -2,7 +2,6 @@ using MediatR;
 using NovaShop.Application.Features.Users.Queries;
 using NovaShop.Infrastructure.Data;
 using NovaShop.Application.Mappers;
-using Microsoft.EntityFrameworkCore;
 
 namespace NovaShop.Application.Features.Users.Handlers;
 

@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using NovaShop.Application.Features.Auth.Commands;
 using NovaShop.Application.Services;
 using NovaShop.Infrastructure.Data;
 

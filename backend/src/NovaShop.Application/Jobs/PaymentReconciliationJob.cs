@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NovaShop.Common.Models;
-using NovaShop.Domain.Entities;
 using NovaShop.Infrastructure.Data;
 
 namespace NovaShop.Application.Jobs;

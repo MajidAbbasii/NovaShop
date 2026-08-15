@@ -1,9 +1,6 @@
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using NovaShop.Application.Features.Discounts.Dtos;
 using NovaShop.Domain.Repositories;
-using NovaShop.Infrastructure.Data;
 
 namespace NovaShop.Application.Features.Discounts.Handlers;
 

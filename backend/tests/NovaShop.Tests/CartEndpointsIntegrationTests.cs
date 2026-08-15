@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using NovaShop.Domain.Common;
-using NovaShop.Domain.Entities;
 using NovaShop.Application.Features.Carts.Commands;
-using NovaShop.Application.Features.Carts.Dtos;
 using NovaShop.Application.Features.Products.Commands;
 using Xunit;
 using FluentAssertions;

@@ -1,9 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NovaShop.Application.Features.Orders.Commands;
-using NovaShop.Application.Features.Orders.Dtos;
 using NovaShop.Application.Features.Orders.Queries;
-using NovaShop.Domain.Common;
 using NovaShop.Infrastructure.Data;
 
 namespace NovaShop.Api.Endpoints;

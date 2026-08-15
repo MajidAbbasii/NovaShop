@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NovaShop.Application.Features.Images.Commands;
 using System.Security.Claims;

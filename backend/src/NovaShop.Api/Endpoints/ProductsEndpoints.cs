@@ -1,8 +1,6 @@
 using MediatR;
 using NovaShop.Application.Features.Products.Commands;
-using NovaShop.Application.Features.Products.Dtos;
 using NovaShop.Application.Features.Products.Queries;
-using NovaShop.Domain.Common;
 
 namespace NovaShop.Api.Endpoints;
 

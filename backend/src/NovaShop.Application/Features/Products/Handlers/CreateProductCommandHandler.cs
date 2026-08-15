@@ -1,7 +1,6 @@
 using MediatR;
 using NovaShop.Application.Caching;
 using NovaShop.Application.Features.Products.Commands;
-using NovaShop.Application.Features.Products.Handlers;
 using NovaShop.Domain.Entities;
 using NovaShop.Domain.Repositories;
 

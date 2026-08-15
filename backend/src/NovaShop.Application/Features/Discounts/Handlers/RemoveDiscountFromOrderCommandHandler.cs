@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NovaShop.Application.Features.Orders.Dtos;
 using NovaShop.Application.Mappers;
-using NovaShop.Domain.Repositories;
 using NovaShop.Infrastructure.Data;
 
 namespace NovaShop.Application.Features.Discounts.Handlers;

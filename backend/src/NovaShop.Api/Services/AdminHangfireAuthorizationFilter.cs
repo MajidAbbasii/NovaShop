@@ -1,7 +1,5 @@
 using System.Security.Claims;
 using Hangfire.Dashboard;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 
 namespace NovaShop.Api.Services;
 
