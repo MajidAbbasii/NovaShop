@@ -30,7 +30,19 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
         if (request.Price.HasValue) product.Price = request.Price.Value;
         if (request.OriginalPrice != null) product.OriginalPrice = request.OriginalPrice;
         if (request.ImageUrl != null) product.ImageUrl = request.ImageUrl;
-        if (request.Stock.HasValue) product.Stock = request.Stock.Value;
+        if (request.Stock.HasValue)
+        {
+            // NEVER clobber active reservations. Admin may adjust stock, but the
+            // total physical inventory must stay >= ReservedQuantity so outstanding
+            // orders are not destroyed. The requested value is treated as the new
+            // AVAILABLE stock; ReservedQuantity is preserved on top of it.
+            var reserved = product.ReservedQuantity;
+            if (request.Stock.Value < reserved)
+                throw new InvalidOperationException(
+                    $"نمی‌توان موجودی را کمتر از مقدار رزرو شده ({reserved}) تنظیم کرد. " +
+                    $"محصول {product.Name} دارای {reserved} عدد رزرو فعال است.");
+            product.Stock = request.Stock.Value;
+        }
         if (request.CategoryId.HasValue) product.CategoryId = request.CategoryId.Value;
 
         if (request.Colors != null)

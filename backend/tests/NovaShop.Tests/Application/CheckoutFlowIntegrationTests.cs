@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NovaShop.Application.Features.Orders.Commands;
+using NovaShop.Domain.Exceptions;
 using NovaShop.Application.Features.Orders.Handlers;
 using NovaShop.Application.Jobs;
 using NovaShop.Application.Mappers;
@@ -259,9 +260,11 @@ public class CheckoutFlowIntegrationTests
 
             Assert.False(result.Success);
             Assert.Equal("Failed", result.PaymentStatus);
-            // order failed; stock reservation remains (released by reservation-expiry job)
-            Assert.Equal(8, product.Stock);
-            Assert.Equal(2, product.ReservedQuantity);
+            // FIXED: payment initiation failure now releases reserved stock
+            // immediately (previously the expired-reservation Hangfire job was the
+            // only safety net, leaving stock locked for up to 15 minutes).
+            Assert.Equal(10, product.Stock);
+            Assert.Equal(0, product.ReservedQuantity);
             Assert.Equal(Order.StatusFailed, (await ctx.Orders.FindAsync(order.Id))!.Status);
         }
         finally { PaymentPolicy.OnlinePaymentEnabled = prev; }

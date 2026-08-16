@@ -42,6 +42,12 @@ public class NovaShopDbContext : DbContext
             .WithMany(c => c.Products)
             .HasForeignKey(p => p.CategoryId);
 
+        // Concurrency token (optimistic locking) for inventory safety.
+        modelBuilder.Entity<Product>()
+            .Property(p => p.RowVersion)
+            .IsRowVersion()
+            .IsConcurrencyToken();
+
         // ProductImage - Product
         modelBuilder.Entity<ProductImage>()
             .HasOne(pi => pi.Product)

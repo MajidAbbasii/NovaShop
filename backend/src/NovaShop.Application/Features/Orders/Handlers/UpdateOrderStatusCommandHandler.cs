@@ -78,14 +78,17 @@ public class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOrderStatus
                 if (wasPaid)
                 {
                     // Paid orders already had stock confirmed (permanent deduction).
-                    // Restore stock back to inventory.
+                    // Restore the sold units back to available stock.
                     product.Stock += restoreQty;
                 }
                 else if (product.ReservedQuantity > 0)
                 {
-                    // Pre-paid: release reserved stock back.
+                    // Pre-paid (Pending/Confirmed): release only this order's reserved
+                    // share back to available. Uses the partial-release overload so we
+                    // never touch stock reserved by OTHER concurrent orders, and it
+                    // is idempotent (clamped to ReservedQuantity, no-op when already 0).
                     restoreQty = Math.Min(product.ReservedQuantity, item.Quantity);
-                    product.ReleaseReservation();
+                    product.ReleaseReservation(restoreQty);
                 }
                 else continue;
 
@@ -95,9 +98,11 @@ public class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOrderStatus
                     OrderId = order.Id,
                     Type = InventoryTransaction.TypeRelease,
                     Quantity = restoreQty,
-                    StockBefore = wasPaid ? product.Stock - restoreQty : product.StockBefore,
-                    StockAfter = product.Stock,
-                    Reference = $"cancelled-order-{order.Id}"
+                    StockBefore = product.StockBefore,
+                    StockAfter = product.StockAfter,
+                    Reference = wasPaid
+                        ? $"cancelled-paid-order-{order.Id}"
+                        : $"cancelled-order-{order.Id}"
                 });
             }
         }

@@ -152,6 +152,12 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
         {
             order.Fail();
             if (order.Payment != null) order.Payment.Status = "Failed";
+
+            // RELEASE reserved stock immediately — payment initiation failed, so the
+            // reservation must not linger until the expiry job. Done in the same
+            // persistence scope as the order/payment failure state.
+            await ReleaseReservedStockAsync(order, cancellationToken);
+
             await _context.SaveChangesAsync(cancellationToken);
             return new PaymentResultDto
             {
@@ -314,6 +320,39 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
             _logger.LogError("Wallet payment failed for order {OrderId}. Rolling back.", order.Id);
             await transaction.RollbackAsync(cancellationToken);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Release the stock reserved for <paramref name="order"/>'s items back to
+    /// available stock. Writes InventoryTransaction release entries for the
+    /// ledger. Idempotent at the domain level (ReleaseReservation is a no-op
+    /// when ReservedQuantity is already 0).
+    /// </summary>
+    private async Task ReleaseReservedStockAsync(Order order, CancellationToken cancellationToken)
+    {
+        // Re-load items with products so we operate on fresh stock numbers.
+        if (order.Items == null || order.Items.Count == 0)
+        {
+            order = await _context.Orders
+                .Include(o => o.Items).ThenInclude(i => i.Product)
+                .FirstAsync(o => o.Id == order.Id, cancellationToken);
+        }
+
+        foreach (var item in order.Items)
+        {
+            if (item.Product == null) continue;
+            item.Product.ReleaseReservation(item.Quantity);
+            _context.InventoryTransactions.Add(new InventoryTransaction
+            {
+                ProductId = item.ProductId,
+                OrderId = order.Id,
+                Type = InventoryTransaction.TypeRelease,
+                Quantity = item.Quantity,
+                StockBefore = item.Product.StockBefore,
+                StockAfter = item.Product.StockAfter,
+                Reference = $"failed-payment-order-{order.Id}"
+            });
         }
     }
 }

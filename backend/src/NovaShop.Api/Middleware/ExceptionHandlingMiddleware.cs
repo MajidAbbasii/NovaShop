@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using NovaShop.Domain.Exceptions;
 
 namespace NovaShop.Api.Middleware;
 
@@ -31,6 +32,8 @@ public class ExceptionHandlingMiddleware
         {
             FluentValidation.ValidationException => (HttpStatusCode.BadRequest, "Validation failed."),
             UnauthorizedAccessException => (HttpStatusCode.Unauthorized, "نام کاربری یا رمز عبور نادرست است"),
+            ConflictException => (HttpStatusCode.Conflict, exception.Message),
+            InsufficientStockException => (HttpStatusCode.Conflict, "موجودی کافی برای این محصول وجود ندارد."),
             InvalidOperationException => (HttpStatusCode.BadRequest, "درخواست نامعتبر است"),
             KeyNotFoundException => (HttpStatusCode.NotFound, "موردی یافت نشد"),
             _ => (HttpStatusCode.InternalServerError, "An unexpected error occurred.")
