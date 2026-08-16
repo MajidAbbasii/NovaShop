@@ -60,6 +60,30 @@ export async function removeCartItem(cartItemId: number): Promise<void> {
   if (!res.ok && res.status !== 204) throw new Error('Failed to remove cart item');
 }
 
+export interface OrderQuote {
+  subtotal: number;
+  discountAmount: number;
+  discountCode?: string | null;
+  shippingCost: number;
+  isFreeShipping: boolean;
+  shippingMethod: string;
+  grandTotal: number;
+}
+
+/** Server-side order quote (subtotal + discount + shipping), trusted source of truth. */
+export async function getOrderQuote(
+  shippingMethod: string,
+  discountCode?: string | null
+): Promise<OrderQuote> {
+  const params = new URLSearchParams({ shippingMethod });
+  if (discountCode) params.set('discountCode', discountCode);
+  const res = await authFetch(`${BACKEND_URL}/api/orders/quote?${params.toString()}`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error('Failed to fetch order quote');
+  return res.json();
+}
+
 export async function clearCart(): Promise<void> {
   const userId = getCurrentUserId();
   if (!userId) return;

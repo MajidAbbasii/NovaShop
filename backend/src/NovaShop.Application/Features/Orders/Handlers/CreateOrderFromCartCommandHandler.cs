@@ -22,6 +22,7 @@ public class CreateOrderFromCartCommandHandler : IRequestHandler<CreateOrderFrom
     private readonly IReservationScheduler _reservationScheduler;
     private readonly INotificationService _notificationService;
     private readonly IDiscountRepository _discountRepository;
+    private readonly IShippingCostService _shippingCostService;
     private readonly ILogger<CreateOrderFromCartCommandHandler> _logger;
 
     private static readonly TimeSpan ReservationTimeout = TimeSpan.FromMinutes(15);
@@ -33,6 +34,7 @@ public class CreateOrderFromCartCommandHandler : IRequestHandler<CreateOrderFrom
         IReservationScheduler reservationScheduler,
         INotificationService notificationService,
         IDiscountRepository discountRepository,
+        IShippingCostService shippingCostService,
         ILogger<CreateOrderFromCartCommandHandler> logger)
     {
         _context = context;
@@ -41,6 +43,7 @@ public class CreateOrderFromCartCommandHandler : IRequestHandler<CreateOrderFrom
         _reservationScheduler = reservationScheduler;
         _notificationService = notificationService;
         _discountRepository = discountRepository;
+        _shippingCostService = shippingCostService;
         _logger = logger;
     }
 
@@ -118,14 +121,17 @@ public class CreateOrderFromCartCommandHandler : IRequestHandler<CreateOrderFrom
             var isInPerson = !PaymentPolicy.OnlinePaymentEnabled
                 || request.PaymentMethod == "InPerson";
 
+            // Subtotal is derived from the trusted cart (DB-backed unit prices).
+            var subtotal = cart.Items.Sum(i => i.Quantity * i.UnitPrice);
+
             var order = new Order
             {
                 UserId = request.UserId,
-                TotalAmount = cart.TotalAmount + (request.ShippingCost ?? 0m),
-                OriginalTotal = cart.TotalAmount + (request.ShippingCost ?? 0m),
+                TotalAmount = subtotal,
+                OriginalTotal = subtotal,
                 ShippingAddress = request.ShippingAddress,
                 ShippingMethod = request.ShippingMethod,
-                ShippingCost = request.ShippingCost ?? 0m,
+                ShippingCost = 0m,
                 PickupLocation = request.PickupLocation,
                 PickupInstructions = request.PickupInstructions,
                 PaymentMethod = isInPerson ? "InPerson" : request.PaymentMethod,
@@ -163,9 +169,16 @@ public class CreateOrderFromCartCommandHandler : IRequestHandler<CreateOrderFrom
                 discount.IncrementUsage();
             }
 
-            // Shipping is added on top of item totals (AddItem/ApplyDiscount recompute item-only totals)
-            order.OriginalTotal += request.ShippingCost ?? 0m;
-            order.TotalAmount += request.ShippingCost ?? 0m;
+            // Shipping is added on top of item totals. It is recalculated HERE (after any
+            // discount) from the server-side service using the trusted pre-discount subtotal —
+            // the free-shipping threshold is evaluated on that subtotal (existing business rule).
+            // The client never supplies the cost.
+            var itemsSubtotal = order.Items.Sum(i => i.Quantity * i.UnitPrice);
+            var shipping = _shippingCostService.Calculate(itemsSubtotal, request.ShippingMethod);
+            order.ShippingMethod = shipping.ShippingMethod;
+            order.ShippingCost = shipping.ShippingCost;
+            order.OriginalTotal += shipping.ShippingCost;
+            order.TotalAmount += shipping.ShippingCost;
 
             var payment = new Payment
             {

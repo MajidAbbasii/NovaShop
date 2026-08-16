@@ -9,7 +9,35 @@ public static class OrdersEndpoints
 {
     public static IEndpointRouteBuilder MapOrdersEndpoints(this IEndpointRouteBuilder app)
     {
-        // Create Order from current user's cart
+        // Quick server-side price quote (subtotal + discount + shipping).
+        // Used by the checkout UI for live preview only — final order creation
+        // recalculates everything from trusted DB data (never trusts this quote).
+        app.MapPost("/api/orders/quote", async (
+            HttpContext httpContext,
+            [FromBody] QuoteRequest request,
+            IMediator mediator) =>
+        {
+            var userId = GetUserId(httpContext);
+            if (userId == null) return Results.Unauthorized();
+
+            var query = new CalculateOrderQuoteQuery(
+                UserId: userId.Value,
+                ShippingMethod: request.ShippingMethod ?? "POST",
+                DiscountCode: request.DiscountCode
+            );
+
+            try
+            {
+                var quote = await mediator.Send(query);
+                return Results.Ok(quote);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .WithName("CalculateOrderQuote")
+        .RequireAuthorization();
         app.MapPost("/api/orders", async (
             CreateOrderRequest request,
             IMediator mediator,
@@ -24,7 +52,6 @@ public static class OrdersEndpoints
                 ShippingAddress: request.ShippingAddress,
                 PaymentMethod: request.PaymentMethod,
                 ShippingMethod: request.ShippingMethod ?? "POST",
-                ShippingCost: request.ShippingCost,
                 PickupLocation: request.PickupLocation,
                 PickupInstructions: request.PickupInstructions,
                 PhoneNumber: request.PhoneNumber,
@@ -229,10 +256,14 @@ public record CreateOrderRequest(
     string ShippingAddress,
     string PaymentMethod,
     string ShippingMethod = "POST",
-    decimal? ShippingCost = null,
     string? PickupLocation = null,
     string? PickupInstructions = null,
     string? PhoneNumber = null,
+    string? DiscountCode = null
+);
+
+public record QuoteRequest(
+    string ShippingMethod = "POST",
     string? DiscountCode = null
 );
 

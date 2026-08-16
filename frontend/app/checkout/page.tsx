@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
 import { useCart } from '@/lib/cart-context';
-import { computeSubtotal, isAuthenticated } from '@/lib/cart-api';
+import { computeSubtotal, isAuthenticated, getOrderQuote } from '@/lib/cart-api';
 import { useLocale } from '@/lib/locale-context';
 import { formatCurrency } from '@/lib/formatters';
 import { ShoppingBag, Loader2, ArrowLeft, CreditCard, Store, Truck, Mail, Banknote, Tag } from 'lucide-react';
@@ -62,18 +62,31 @@ export default function CheckoutPage() {
 
   const items = cart.items ?? [];
   const subtotal = computeSubtotal(items);
-  const previewDiscountAmount = (() => {
-    if (!appliedDiscount) return 0;
-    if (appliedDiscount.type === 'Percentage')
-      return Math.round((subtotal * appliedDiscount.value) / 100);
-    return Math.min(appliedDiscount.value, subtotal);
-  })();
-  // Shipping: POST (پست پیشتاز) 59,900 — free over 500k; COURIER (پیک موتوری) 129,000; PICKUP (تحویل حضوری) free
-  const shipping =
-    shippingMethod === 'PICKUP' ? 0
-    : shippingMethod === 'COURIER' ? 129_000
-    : subtotal >= 500_000 ? 0 : 59_900;
-  const total = subtotal + shipping - previewDiscountAmount;
+  // Shipping + total are AUTHORITATIVE from the backend. The client sends only
+  // the selected method + discount code and displays the server-computed quote.
+  const [quote, setQuote] = useState<{ shippingCost: number; grandTotal: number; discountAmount: number } | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setQuoteLoading(true);
+      try {
+        const q = await getOrderQuote(shippingMethod, appliedDiscount?.code ?? null);
+        if (!cancelled) setQuote(q);
+      } catch {
+        if (!cancelled) setQuote(null);
+      } finally {
+        if (!cancelled) setQuoteLoading(false);
+      }
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, [shippingMethod, appliedDiscount]);
+
+  const shipping = quote?.shippingCost ?? 0;
+  const previewDiscountAmount = quote?.discountAmount ?? 0;
+  const total = quote?.grandTotal ?? subtotal;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,7 +110,6 @@ export default function CheckoutPage() {
           shippingAddress: shippingMethod === 'PICKUP' ? `${t('checkout.method.pickup')} — ${info.phone}` : shippingAddr,
           paymentMethod: 'InPerson',
           shippingMethod,
-          shippingCost: shipping,
           phoneNumber: info.phone,
           discountCode: appliedDiscount?.code ?? null,
         }),

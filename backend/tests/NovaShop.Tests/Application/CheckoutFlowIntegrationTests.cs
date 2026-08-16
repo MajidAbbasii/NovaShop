@@ -78,6 +78,7 @@ public class CheckoutFlowIntegrationTests
         var handler = new CreateOrderFromCartCommandHandler(
             ctx, new OrderMapper(), publish.Object, scheduler.Object, notification.Object,
             new Mock<IDiscountRepository>().Object,
+            new ShippingCostService(),
             Mock.Of<ILogger<CreateOrderFromCartCommandHandler>>());
 
         var result = await handler.Handle(
@@ -87,7 +88,10 @@ public class CheckoutFlowIntegrationTests
         Assert.Equal(userId, result.UserId);
         Assert.Equal(Order.StatusPending, result.Status);
         Assert.Equal(2, result.Items.Count);
-        Assert.Equal(40m, result.TotalAmount);
+        // Subtotal = 2*10 + 1*20 = 40. POST (< free-shipping threshold) => shipping 59,900.
+        Assert.Equal(40m, result.OriginalTotal - result.ShippingCost);
+        Assert.Equal(59_900m, result.ShippingCost);
+        Assert.Equal(59_940m, result.TotalAmount);
         Assert.Equal("123 Main St", result.ShippingAddress);
 
         // stock reserved: 10-2=8, 5-1=4
@@ -112,6 +116,7 @@ public class CheckoutFlowIntegrationTests
         var handler = new CreateOrderFromCartCommandHandler(
             ctx, new OrderMapper(), Mock.Of<IPublishEndpoint>(), Mock.Of<IReservationScheduler>(),
             Mock.Of<INotificationService>(), new Mock<IDiscountRepository>().Object,
+            new ShippingCostService(),
             Mock.Of<ILogger<CreateOrderFromCartCommandHandler>>());
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
@@ -136,6 +141,7 @@ public class CheckoutFlowIntegrationTests
         var handler = new CreateOrderFromCartCommandHandler(
             ctx, new OrderMapper(), Mock.Of<IPublishEndpoint>(), Mock.Of<IReservationScheduler>(),
             Mock.Of<INotificationService>(), new Mock<IDiscountRepository>().Object,
+            new ShippingCostService(),
             Mock.Of<ILogger<CreateOrderFromCartCommandHandler>>());
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
@@ -160,6 +166,7 @@ public class CheckoutFlowIntegrationTests
         var handler = new CreateOrderFromCartCommandHandler(
             ctx, new OrderMapper(), Mock.Of<IPublishEndpoint>(), Mock.Of<IReservationScheduler>(),
             Mock.Of<INotificationService>(), new Mock<IDiscountRepository>().Object,
+            new ShippingCostService(),
             Mock.Of<ILogger<CreateOrderFromCartCommandHandler>>());
 
         var cmd = new CreateOrderFromCartCommand(1, "Addr", "InPerson", IdempotencyKey: "dup-123");

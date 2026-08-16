@@ -10,7 +10,6 @@ public record CreateOrderFromCartCommand(
     string ShippingAddress,
     string PaymentMethod,
     string ShippingMethod = "POST",
-    decimal? ShippingCost = null,
     string? PickupLocation = null,
     string? PickupInstructions = null,
     string? PhoneNumber = null,
@@ -31,6 +30,8 @@ public class CreateOrderFromCartCommandValidator : AbstractValidator<CreateOrder
             .NotEmpty().WithMessage("روش ارسال اجباری است")
             .Must(sm => sm is "POST" or "COURIER" or "PICKUP")
             .WithMessage("روش ارسال باید یکی از: POST, COURIER, PICKUP");
+        // NOTE: ShippingCost is intentionally NOT accepted from the client.
+        // The backend is the single source of truth and computes it via IShippingCostService.
 
         RuleFor(x => x.ShippingAddress)
             .NotEmpty().WithMessage("آدرس تحویل اجباری است")
@@ -49,7 +50,5 @@ public class CreateOrderFromCartCommandValidator : AbstractValidator<CreateOrder
             .When(_ => !OnlinePaymentEnabled)
             .WithMessage("پرداخت آنلاین موقتاً غیرفعال است؛ فقط پرداخت حضوری امکان‌پذیر است");
 
-        RuleFor(x => x.ShippingCost)
-            .GreaterThanOrEqualTo(0).WithMessage("هزینه ارسال نمی‌تواند منفی باشد");
     }
 }

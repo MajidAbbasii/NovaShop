@@ -35,6 +35,7 @@ public static class NovaShopServiceCollectionExtensions
     public static IServiceCollection AddNovaShopServices(this IServiceCollection services, IConfiguration configuration)
     {
         ConfigureOptions(services, configuration);
+        ConfigureShippingPolicy(services, configuration);
         ConfigurePaymentPolicy(services, configuration);
         ConfigureAuthentication(services, configuration);
         ConfigureAuthorization(services);
@@ -59,6 +60,14 @@ public static class NovaShopServiceCollectionExtensions
         services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
         services.Configure<CacheSettings>(configuration.GetSection("Cache"));
         services.Configure<AuthenticationOptions>(configuration.GetSection("Authentication"));
+    }
+
+    private static void ConfigureShippingPolicy(IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<ShippingOptions>(configuration.GetSection(ShippingOptions.SectionName));
+        var options = configuration.GetSection(ShippingOptions.SectionName)
+                    .Get<ShippingOptions>() ?? new ShippingOptions();
+        ShippingPolicy.Apply(options);
     }
 
     private static void ConfigurePaymentPolicy(IServiceCollection services, IConfiguration configuration)
@@ -176,6 +185,8 @@ public static class NovaShopServiceCollectionExtensions
         services.AddSingleton<UserMapper>();
         services.AddSingleton<OrderMapper>();
         services.AddSingleton<WishlistMapper>();
+
+        services.AddScoped<IShippingCostService, ShippingCostService>();
     }
 
     private static void ConfigureImageServices(IServiceCollection services, IConfiguration configuration)
