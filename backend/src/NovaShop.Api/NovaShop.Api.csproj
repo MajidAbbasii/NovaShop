@@ -43,6 +43,7 @@
 <PackageReference Include="AspNetCore.HealthChecks.SqlServer" Version="6.0.0" />
 <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="6.0.0" />
 <PackageReference Include="Polly.Extensions.Http" Version="3.0.0" />
+<PackageReference Include="prometheus-net.AspNetCore" Version="8.2.1" />
 </ItemGroup>
 
 <ItemGroup>

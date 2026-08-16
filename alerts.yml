@@ -1,0 +1,102 @@
+# Prometheus alerting rules for NovaShop
+groups:
+  - name: novashop-alerts
+    rules:
+      # API Error Rate
+      - alert: HighErrorRate
+        expr: sum(rate(http_requests_total{status=~"5[0-9][0-9]"}[5m])) / sum(rate(http_requests_total[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "High error rate (>5%)"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+
+      # HTTP 5xx errors
+      - alert: High5xxErrors
+        expr: rate(http_requests_total{status=~"5[0-9][0-9]"}[5m]) > 0.1
+        for: 1m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "HTTP 5xx errors detected"
+          description: "Rate of 5xx errors is {{ $value | humanizePercentage }} per second"
+
+      # Response Time
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High response time (P95 > 1s)"
+          description: "95th percentile response time is {{ $value | humanize }} seconds"
+
+      # Service Down
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Service is down"
+          description: "Service {{ $labels.job }} has been down for more than 1 minute"
+
+      # Health Check Failures
+      - alert: HealthCheckFailed
+        expr: probe_success == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Health check failed"
+          description: "Health check for {{ $labels.job }} is failing"
+
+      # Rate Limiting (too many 429s)
+      - alert: RateLimited
+        expr: rate(http_requests_total{status="429"}[5m]) > 10
+        for: 1m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High rate of 429 Too Many Requests"
+          description: "{{ $value }} requests per second are being rate-limited"
+
+      # CPU Usage (container)
+      - alert: HighCPUUsage
+        expr: (rate(container_cpu_usage_seconds_total[5m])) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "High CPU usage (>80%)"
+          description: "CPU usage is above 80% for more than 5 minutes"
+
+      # Memory Usage (container)
+      - alert: HighMemoryUsage
+        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "High memory usage (>80%)"
+          description: "Memory usage is {{ $value | humanizePercentage }}"
+
+      # Hangfire job failures
+      - alert: HangfireJobFailures
+        expr: rate(hangfire_job_failed_total[5m]) > 1
+        for: 2m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Hangfire jobs failing"
+          description: "{{ $value }} jobs per second are failing"

@@ -1,0 +1,62 @@
+# Alertmanager configuration for NovaShop
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: "localhost:25"
+  smtp_from: "alertmanager@novashop.local"
+  smtp_html: |
+    <h2>{{ template "novashop.default.name" . }}</h2>
+    {{ template "novashop.default.text" . }}
+
+route:
+  group_by: ["alertname"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 3h
+  receiver: "default"
+  routes:
+    - matchers:
+        - severity = "critical"
+      receiver: "critical"
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 1h
+    - matchers:
+        - severity = "warning"
+      receiver: "warning"
+      repeat_interval: 2h
+    - matchers:
+        - team = "infrastructure"
+      receiver: "infra"
+      continue: true
+
+receivers:
+  - name: "default"
+    webhook_configs:
+      - url: "http://otel-collector:4318"
+        send_resolved: true
+
+  - name: "critical"
+    webhook_configs:
+      - url: "http://otel-collector:4318"
+        send_resolved: true
+        http_config:
+          basic_auth:
+            username: "novashop"
+            password: "monitoring"
+
+  - name: "warning"
+    webhook_configs:
+      - url: "http://otel-collector:4318"
+        send_resolved: true
+
+  - name: "infra"
+    webhook_configs:
+      - url: "http://otel-collector:4318"
+        send_resolved: true
+
+inhibit_rules:
+  - source_matchers:
+      - severity = "critical"
+    target_matchers:
+      - severity = "warning"
+    equal: ["alertname"]

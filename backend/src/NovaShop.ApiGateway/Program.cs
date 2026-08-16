@@ -1,6 +1,7 @@
 using System.Threading.RateLimiting;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Prometheus;
 
 namespace NovaShop.ApiGateway;
 
@@ -108,6 +109,10 @@ public class Program
         app.UseAuthorization();
 
         app.MapHealthChecks("/health");
+
+        // Prometheus metrics endpoint
+        app.UseMetricServer();
+        app.UseHttpMetrics();
 
         app.MapReverseProxy();
 

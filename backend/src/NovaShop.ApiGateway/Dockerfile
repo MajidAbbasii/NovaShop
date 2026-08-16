@@ -1,28 +1,25 @@
 # Docker configuration for NovaShop API Gateway
 # This Dockerfile sets up the YARP-based API Gateway for NovaShop microservices
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine-amd64 AS base
-
-WORKDIR /app
-
-COPY NovaShop.ApiGateway.csproj .
-RUN dotnet restore - DisableParallelization true
-
-FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine-amd64 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY . .
-WORKDIR "/src/NovaShop.ApiGateway"
-RUN dotnet build -c Release -o /app/build
+# Copy csproj and restore as distinct layers
+COPY backend/src/NovaShop.ApiGateway/NovaShop.ApiGateway.csproj backend/src/NovaShop.ApiGateway/
+RUN dotnet restore "backend/src/NovaShop.ApiGateway/NovaShop.ApiGateway.csproj"
 
-FROM base AS runtime
+# Copy everything else and build
+COPY . .
+WORKDIR "/src/backend/src/NovaShop.ApiGateway"
+RUN dotnet publish "NovaShop.ApiGateway.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
-COPY --from=build /app/build .
+COPY --from=build /app/publish .
 
 ENV ASPNETCORE_URLS=http://+:5100
-ENV DOTNET_SYSTEM_GLOBALIZATION_APARTION=1
+ENV DOTNET_SYSTEM_GLOBALIZATION_APARTMENT=1
 
 EXPOSE 5100
-EXPOSE 8080
 
-ENTRYPOINT ["dotnet", "--info", "NovaShop.ApiGateway.dll"]
+ENTRYPOINT ["dotnet", "NovaShop.ApiGateway.dll"]

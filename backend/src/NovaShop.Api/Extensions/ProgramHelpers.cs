@@ -11,6 +11,7 @@ using NovaShop.Application.Jobs;
 using NovaShop.Api.Middleware;
 using NovaShop.Api.RateLimiting;
 using NovaShop.Common.Models;
+using Prometheus;
 
 namespace NovaShop.Api.Extensions;
 
@@ -231,7 +232,9 @@ public static class ProgramHelpers
         // Health endpoints
         app.MapHealthChecks("/health");
 
-        // Map endpoint modules
+        // Prometheus metrics endpoint
+        app.UseMetricServer();
+        app.UseHttpMetrics();
         app.MapAuthEndpoints();
         app.MapProductsEndpoints();
         app.MapCategoriesEndpoints();

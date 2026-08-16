@@ -1,0 +1,164 @@
+{
+  "id": null,
+  "title": "NovaShop — System Health",
+  "tags": ["novashop", "system", "infrastructure"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "API Gateway Status",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "up{job=\"novashop-api-gateway\"}",
+          "legendFormat": "Gateway",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "mappingType": 0,
+        "options": {
+          "0": { "text": "DOWN", "color": "red" },
+          "1": { "text": "UP", "color": "green" }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "API Services Status",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "up{job=\"novashop-api\"}",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "mappingType": 0,
+        "options": {
+          "0": { "text": "DOWN", "color": "red" },
+          "1": { "text": "UP", "color": "green" }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "graph",
+      "title": "CPU Usage (Container)",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "rate(container_cpu_usage_seconds_total[5m]) * 100",
+          "legendFormat": "{{container}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "unit": "percent",
+        "title": "CPU %"
+      }
+    },
+    {
+      "id": 4,
+      "type": "graph",
+      "title": "Memory Usage (Container)",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "container_memory_usage_bytes / 1024 / 1024",
+          "legendFormat": "{{container}} (MiB)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "unit": "bytes",
+        "decimals": 0,
+        "title": "Memory"
+      }
+    },
+    {
+      "id": 5,
+      "type": "graph",
+      "title": "Node CPU Usage",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "unit": "percent",
+        "title": "CPU %"
+      }
+    },
+    {
+      "id": 6,
+      "type": "graph",
+      "title": "Node Memory Usage",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "unit": "percent",
+        "title": "Memory %"
+      }
+    },
+    {
+      "id": 7,
+      "type": "graph",
+      "title": "Disk Usage",
+      "gridPos": { "x": 0, "y": 20, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "100 - (node_filesystem_free_bytes * 100 / node_filesystem_size_bytes)",
+          "legendFormat": "{{instance}} {{mountpoint}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "unit": "percent",
+        "title": "Disk %"
+      }
+    },
+    {
+      "id": 8,
+      "type": "graph",
+      "title": "Hangfire Enqueued Jobs",
+      "gridPos": { "x": 12, "y": 20, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "hangfire_enqueued_count",
+          "legendFormat": "Enqueued",
+          "refId": "A"
+        },
+        {
+          "expr": "hangfire_processing_count",
+          "legendFormat": "Processing",
+          "refId": "B"
+        },
+        {
+          "expr": "hangfire_failed_count",
+          "legendFormat": "Failed",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "unit": "short",
+        "title": "Hangfire Jobs"
+      }
+    }
+  ]
+}

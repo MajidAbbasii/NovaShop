@@ -1,0 +1,168 @@
+{
+  "id": null,
+  "title": "NovaShop — Business Metrics",
+  "tags": ["novashop", "business", "commerce"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "graph",
+      "title": "Orders Created (24h)",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by(service) (rate(orders_created_total[5m]))",
+          "legendFormat": "{{service}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "unit": "short",
+        "title": "Orders/sec"
+      }
+    },
+    {
+      "id": 2,
+      "type": "graph",
+      "title": "Revenue (24h)",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by(service) (rate(revenue_total{currency=\"USD\"}[5m]))",
+          "legendFormat": "{{service}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "unit": "currencyUSD",
+        "title": "Revenue/sec"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Total Products",
+      "gridPos": { "x": 0, "y": 8, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "novashop_products_total",
+          "legendFormat": "Products",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "unit": "short",
+        "title": "Count"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Total Categories",
+      "gridPos": { "x": 6, "y": 8, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "novashop_categories_total",
+          "legendFormat": "Categories",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "unit": "short",
+        "title": "Count"
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Low Stock Products",
+      "gridPos": { "x": 12, "y": 8, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "novashop_products_low_stock_total",
+          "legendFormat": "Low Stock",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "unit": "short",
+        "title": "Count",
+        "thresholds": [
+          { "value": 1, "color": "orange" },
+          { "value": 5, "color": "red" }
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Registered Users",
+      "gridPos": { "x": 18, "y": 8, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "novashop_users_registered_total",
+          "legendFormat": "Users",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "unit": "short",
+        "title": "Count"
+      }
+    },
+    {
+      "id": 7,
+      "type": "graph",
+      "title": "Cart Operations",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by(operation) (rate(novashop_cart_operations_total[5m]))",
+          "legendFormat": "{{operation}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "unit": "reqps",
+        "title": "Operations/sec"
+      }
+    },
+    {
+      "id": 8,
+      "type": "graph",
+      "title": "Active Users (1h)",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by(service) (rate(active_users_total[1h]))",
+          "legendFormat": "{{service}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "unit": "short",
+        "title": "Users"
+      }
+    },
+    {
+      "id": 9,
+      "type": "graph",
+      "title": "Order Status Distribution",
+      "gridPos": { "x": 0, "y": 20, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by(status) (rate(orders_status_total[5m]))",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "unit": "short",
+        "title": "Orders/sec by Status"
+      }
+    }
+  ]
+}
