@@ -21,6 +21,9 @@ export interface UserDto {
   isActive: boolean;
   createdAt: string;
   avatarUrl?: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
 }
 
 export interface OrderDto {
@@ -399,6 +402,27 @@ export function deleteCategory(id: number) {
 
 export function getAdminUser(id: number) {
   return apiFetch<UserDto>(`/api/users/${id}`);
+}
+
+// --- Customer self-profile (current authenticated user) ---
+
+export function getCurrentUser() {
+  return apiFetch<UserDto>('/api/users/me');
+}
+
+export function updateProfile(data: {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phoneNumber?: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+}) {
+  return apiFetch<UserDto>('/api/users/me', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
 }
 
 // --- Admin Discounts ---

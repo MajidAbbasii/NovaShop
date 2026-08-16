@@ -1,5 +1,7 @@
 using MediatR;
+using Microsoft.Extensions.Options;
 using NovaShop.Application.Features.Auth.Commands;
+using NovaShop.Common.Models;
 
 namespace NovaShop.Api.Endpoints;
 
@@ -27,10 +29,13 @@ public static class AuthEndpoints
             var response = await mediator.Send(command);
             return Results.Ok(response);
         })
+        .WithName("Register")
         .AllowAnonymous();
 
-        app.MapPost("/api/auth/register/resend", async (ResendRegistrationCommand command, IMediator mediator) =>
+        app.MapPost("/api/auth/register/resend", async (ResendRegistrationCommand command, IMediator mediator, IOptions<AuthenticationOptions> authOptions) =>
         {
+            if (!authOptions.Value.OtpEnabled)
+                return Results.Problem(detail: "OTP verification is disabled", statusCode: 403);
             try
             {
                 await mediator.Send(command);
@@ -44,8 +49,10 @@ public static class AuthEndpoints
         .WithName("ResendRegistration")
         .AllowAnonymous();
 
-        app.MapPost("/api/auth/register/verify", async (VerifyRegistrationCommand command, IMediator mediator) =>
+        app.MapPost("/api/auth/register/verify", async (VerifyRegistrationCommand command, IMediator mediator, IOptions<AuthenticationOptions> authOptions) =>
         {
+            if (!authOptions.Value.OtpEnabled)
+                return Results.Problem(detail: "OTP verification is disabled", statusCode: 403);
             var response = await mediator.Send(command);
             return Results.Ok(new { Token = response.AccessToken });
         })
@@ -66,8 +73,10 @@ public static class AuthEndpoints
         .WithName("CheckMobile")
         .AllowAnonymous();
 
-        app.MapPost("/api/auth/otp/request", async (RequestOtpCommand command, IMediator mediator) =>
+        app.MapPost("/api/auth/otp/request", async (RequestOtpCommand command, IMediator mediator, IOptions<AuthenticationOptions> authOptions) =>
         {
+            if (!authOptions.Value.OtpEnabled)
+                return Results.Problem(detail: "OTP login is disabled", statusCode: 403);
             try
             {
                 await mediator.Send(command);
@@ -85,8 +94,10 @@ public static class AuthEndpoints
         .WithName("RequestOtp")
         .AllowAnonymous();
 
-        app.MapPost("/api/auth/otp/verify", async (VerifyOtpCommand command, IMediator mediator) =>
+        app.MapPost("/api/auth/otp/verify", async (VerifyOtpCommand command, IMediator mediator, IOptions<AuthenticationOptions> authOptions) =>
         {
+            if (!authOptions.Value.OtpEnabled)
+                return Results.Problem(detail: "OTP login is disabled", statusCode: 403);
             var response = await mediator.Send(command);
             return Results.Ok(new { Token = response.AccessToken });
         })

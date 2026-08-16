@@ -58,6 +58,7 @@ public static class NovaShopServiceCollectionExtensions
     {
         services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
         services.Configure<CacheSettings>(configuration.GetSection("Cache"));
+        services.Configure<AuthenticationOptions>(configuration.GetSection("Authentication"));
     }
 
     private static void ConfigurePaymentPolicy(IServiceCollection services, IConfiguration configuration)

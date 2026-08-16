@@ -1,13 +1,26 @@
 using FluentValidation;
 using MediatR;
-using NovaShop.Application.Features.Auth.Commands;
 
 public record RegisterResult
 {
     public bool Pending { get; init; }
+    public int? UserId { get; init; }
+    public string? Token { get; init; }
 }
 
-public record RegisterCommand(string Username, string PhoneNumber, string Password) : IRequest<RegisterResult>;
+public record RegisterCommand(
+    string Username,
+    string Password,
+    string ConfirmPassword,
+    string? FirstName,
+    string? LastName,
+    string? Email,
+    string? PhoneNumber,
+    string? Address,
+    string? City,
+    string? PostalCode,
+    // Kept for backward-compatible API; ignored when OTP is disabled and never grants role.
+    string? Role = null) : IRequest<RegisterResult>;
 
 public class RegisterCommandValidator : AbstractValidator<RegisterCommand>
 {
@@ -15,22 +28,14 @@ public class RegisterCommandValidator : AbstractValidator<RegisterCommand>
     {
         RuleFor(x => x.Username).NotEmpty().WithMessage("Username is required")
             .MinimumLength(3).WithMessage("Username must be at least 3 characters");
-        RuleFor(x => x.PhoneNumber).NotEmpty().WithMessage("Phone number is required")
-            .Matches(@"^09\d{9}$").WithMessage("Valid phone number is required (e.g. 09123456789)");
         RuleFor(x => x.Password).NotEmpty().WithMessage("Password is required")
             .MinimumLength(6).WithMessage("Password must be at least 6 characters");
-    }
-}
-
-public record VerifyRegistrationCommand(string PhoneNumber, string Code) : IRequest<LoginResponse>;
-
-public class VerifyRegistrationCommandValidator : AbstractValidator<VerifyRegistrationCommand>
-{
-    public VerifyRegistrationCommandValidator()
-    {
-        RuleFor(x => x.PhoneNumber).NotEmpty().WithMessage("Phone number is required")
-            .Matches(@"^09\d{9}$").WithMessage("Valid phone number is required (e.g. 09123456789)");
-        RuleFor(x => x.Code).NotEmpty().WithMessage("Code is required")
-            .Length(6).WithMessage("Code must be 6 digits");
+        RuleFor(x => x.ConfirmPassword).Equal(x => x.Password)
+            .WithMessage("Password confirmation does not match");
+        RuleFor(x => x.Email).EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.Email))
+            .WithMessage("Valid email is required");
+        RuleFor(x => x.PhoneNumber)
+            .Matches("^09\\d{9}$").When(x => !string.IsNullOrWhiteSpace(x.PhoneNumber))
+            .WithMessage("Valid phone number is required (e.g. 09123456789)");
     }
 }

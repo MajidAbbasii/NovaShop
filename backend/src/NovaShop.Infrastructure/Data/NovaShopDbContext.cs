@@ -207,6 +207,11 @@ public class NovaShopDbContext : DbContext
             u.Property(x => x.PhoneNumber).HasMaxLength(20);
             u.Property(x => x.Username).HasMaxLength(50);
             u.Property(x => x.Email).HasMaxLength(100);
+            u.Property(x => x.FirstName).HasMaxLength(100);
+            u.Property(x => x.LastName).HasMaxLength(100);
+            u.Property(x => x.Address).HasMaxLength(500);
+            u.Property(x => x.City).HasMaxLength(100);
+            u.Property(x => x.PostalCode).HasMaxLength(20);
             u.HasIndex(x => x.PhoneNumber).IsUnique();
             u.HasIndex(x => x.Username).IsUnique();
         });
