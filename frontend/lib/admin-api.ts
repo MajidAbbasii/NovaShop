@@ -566,3 +566,85 @@ export async function apiFetchAuth<T>(url: string, options?: RequestInit): Promi
     throw e;
   }
 }
+
+// ---- Translation Management ----
+export interface TranslationRow {
+  id: number;
+  key: string;
+  locale: string;
+  value: string;
+  namespace?: string | null;
+  description?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TranslationPage {
+  items: TranslationRow[];
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface MissingKey {
+  key: string;
+  missingLocales: string[];
+}
+export interface MissingReport {
+  supportedLocales: string[];
+  totalKeys: number;
+  missingCount: number;
+  missing: MissingKey[];
+}
+
+export function getTranslations(params: {
+  pageNumber?: number;
+  pageSize?: number;
+  locale?: string;
+  namespace?: string;
+  key?: string;
+  search?: string;
+  onlyMissing?: boolean;
+} = {}) {
+  const q = new URLSearchParams();
+  if (params.pageNumber) q.set('pageNumber', String(params.pageNumber));
+  if (params.pageSize) q.set('pageSize', String(params.pageSize));
+  if (params.locale) q.set('locale', params.locale);
+  if (params.namespace) q.set('namespace', params.namespace);
+  if (params.key) q.set('key', params.key);
+  if (params.search) q.set('search', params.search);
+  if (params.onlyMissing) q.set('onlyMissing', 'true');
+  return apiFetch<TranslationPage>(`/api/admin/translations?${q.toString()}`);
+}
+
+export function getMissingTranslations() {
+  return apiFetch<MissingReport>('/api/admin/translations/missing');
+}
+
+export function createTranslation(req: {
+  key: string;
+  namespace?: string;
+  description?: string;
+  values: { locale: string; value: string }[];
+}) {
+  return apiFetch<TranslationRow>('/api/admin/translations', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+export function updateTranslation(
+  id: number,
+  req: { value?: string; namespace?: string; description?: string; isActive?: boolean }
+) {
+  return apiFetch<TranslationRow>(`/api/admin/translations/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(req),
+  });
+}
+
+export function deleteTranslation(id: number) {
+  return apiFetch<void>(`/api/admin/translations/${id}`, { method: 'DELETE' });
+}

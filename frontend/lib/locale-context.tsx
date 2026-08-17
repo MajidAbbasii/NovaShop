@@ -2,11 +2,12 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import {
-  translations,
+  translations as fallbackTranslations,
   type Locale,
   isLocale,
   localeDir,
 } from './translations';
+import { loadTranslations, getCachedTranslations, primeFromStatic, type TranslationMap } from './translation-service';
 
 export const STORAGE_KEY = 'novashop-locale';
 export const DEFAULT_LOCALE: Locale = 'fa';
@@ -32,14 +33,31 @@ function interpolate(template: string, args: Record<string, string | number>): s
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
+  // Live dictionary: starts from static fallback, replaced by backend values when fetched.
+  const [dict, setDict] = useState<TranslationMap>(() =>
+    (fallbackTranslations[DEFAULT_LOCALE] ?? {}) as TranslationMap
+  );
 
+  // Hydrate locale from storage + prime static dict on first client render.
   useEffect(() => {
+    primeFromStatic(locale);
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved && isLocale(saved)) {
       setLocaleState(saved);
       applyDir(saved);
     }
   }, []);
+
+  // Whenever locale changes, fetch the full dictionary from the Backend (bulk, cached).
+  useEffect(() => {
+    let cancelled = false;
+    loadTranslations(locale).then((map) => {
+      if (!cancelled) setDict(map);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [locale]);
 
   useEffect(() => {
     applyDir(locale);
@@ -63,12 +81,10 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
 
   const t = useCallback(
     (key: string, fallback?: string): string => {
-      const map = translations[locale];
-      if (!map) return fallback ?? key;
-      const value = map[key];
+      const value = dict[key] ?? getCachedTranslations(locale)[key];
       return value ?? fallback ?? key;
     },
-    [locale]
+    [dict, locale]
   );
 
   const tva = useCallback(

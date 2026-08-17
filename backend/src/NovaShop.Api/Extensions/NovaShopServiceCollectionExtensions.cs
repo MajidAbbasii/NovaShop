@@ -175,6 +175,9 @@ public static class NovaShopServiceCollectionExtensions
         // JWT + refresh-token service
         services.AddScoped<IJwtTokenService, JwtTokenService>();
 
+        // Translation management (single authoritative source for UI translations)
+        services.AddScoped<ITranslationService, TranslationService>();
+
         // OTP store (in-memory; move to Redis for multi-instance)
         services.AddSingleton<OtpStore>();
         services.AddSingleton<PendingRegistrationStore>();

@@ -17,10 +17,11 @@ import {
   BellIcon,
     BoxesIcon,
         MessageSquareIcon,
-        StarIcon,
-        ImageIcon,
-        CameraIcon,
-      } from "lucide-react"
+              StarIcon,
+              ImageIcon,
+              CameraIcon,
+              LanguagesIcon,
+            } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -74,6 +75,12 @@ const NAV_GROUPS: { titleKey: string; items: NavItem[] }[] = [
     titleKey: "admin.usersNav",
     items: [
       { href: "/admin/users", labelKey: "admin.users.title", icon: UsersIcon },
+    ],
+  },
+  {
+    titleKey: "admin.settings.title",
+    items: [
+      { href: "/admin/translations", labelKey: "admin.translations.title", icon: LanguagesIcon },
     ],
   },
 ]

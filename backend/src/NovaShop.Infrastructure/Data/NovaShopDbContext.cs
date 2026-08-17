@@ -28,6 +28,7 @@ public class NovaShopDbContext : DbContext
     public DbSet<Banner> Banners { get; set; }
     public DbSet<CustomDollRequest> CustomDollRequests { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
+    public DbSet<Translation> Translations { get; set; }
 
     public NovaShopDbContext(DbContextOptions<NovaShopDbContext> options)
         : base(options)
@@ -320,6 +321,22 @@ public class NovaShopDbContext : DbContext
             rt.Property(x => x.Token).IsRequired().HasMaxLength(100);
             rt.HasIndex(x => x.Token).IsUnique();
             rt.HasIndex(x => x.UserId);
+        });
+
+        // Translation — single authoritative source of UI translations.
+        // Key + Locale must be unique; one bulk cache entry is kept per locale.
+        modelBuilder.Entity<Translation>(t =>
+        {
+            t.Property(x => x.Key).IsRequired().HasMaxLength(200);
+            t.Property(x => x.Locale).IsRequired().HasMaxLength(10);
+            t.Property(x => x.Value).IsRequired();
+            t.Property(x => x.Namespace).HasMaxLength(50);
+            t.Property(x => x.Description).HasMaxLength(500);
+            t.Property(x => x.CreatedBy).HasMaxLength(100);
+            t.Property(x => x.UpdatedBy).HasMaxLength(100);
+            t.HasIndex(x => new { x.Key, x.Locale }).IsUnique();
+            t.HasIndex(x => x.Locale);
+            t.HasIndex(x => new { x.Namespace, x.Locale });
         });
     }
 }
