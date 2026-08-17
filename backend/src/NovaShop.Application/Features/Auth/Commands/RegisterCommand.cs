@@ -6,6 +6,7 @@ public record RegisterResult
     public bool Pending { get; init; }
     public int? UserId { get; init; }
     public string? Token { get; init; }
+    public string? RefreshToken { get; init; }
 }
 
 public record RegisterCommand(

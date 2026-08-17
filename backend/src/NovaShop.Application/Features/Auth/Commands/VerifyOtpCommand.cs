@@ -31,13 +31,13 @@ public class VerifyOtpCommandHandler : IRequestHandler<VerifyOtpCommand, LoginRe
 {
     private readonly NovaShopDbContext _context;
     private readonly OtpStore _otpStore;
-    private readonly JwtSettings _jwt;
+    private readonly IJwtTokenService _tokenService;
 
-    public VerifyOtpCommandHandler(NovaShopDbContext context, OtpStore otpStore, IOptions<JwtSettings> jwt)
+    public VerifyOtpCommandHandler(NovaShopDbContext context, OtpStore otpStore, IJwtTokenService tokenService)
     {
         _context = context;
         _otpStore = otpStore;
-        _jwt = jwt.Value;
+        _tokenService = tokenService;
     }
 
     public async Task<LoginResponse> Handle(VerifyOtpCommand request, CancellationToken cancellationToken)
@@ -50,23 +50,6 @@ public class VerifyOtpCommandHandler : IRequestHandler<VerifyOtpCommand, LoginRe
         if (user == null)
             throw new UnauthorizedAccessException("کاربری با این شماره موبایل یافت نشد");
 
-        var claims = new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.Username),
-            new Claim(ClaimTypes.Role, user.Role),
-            new Claim("sub", user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-        };
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.Key!));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        var token = new JwtSecurityToken(_jwt.Issuer, _jwt.Audience, claims, expires: DateTime.UtcNow.AddHours(8), signingCredentials: creds);
-
-        return new LoginResponse
-        {
-            AccessToken = new JwtSecurityTokenHandler().WriteToken(token),
-            RefreshToken = Guid.NewGuid().ToString(),
-            Expires = DateTime.UtcNow.AddHours(8),
-        };
+        return await _tokenService.GenerateAndPersistAsync(user, cancellationToken);
     }
 }

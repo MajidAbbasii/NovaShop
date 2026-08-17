@@ -12,7 +12,7 @@ public static class AuthEndpoints
         app.MapPost("/api/auth/login", async (LoginCommand command, IMediator mediator) =>
         {
             var response = await mediator.Send(command);
-            return Results.Ok(new { Token = response.AccessToken });
+            return Results.Ok(new { Token = response.AccessToken, RefreshToken = response.RefreshToken });
         })
         .WithName("Login")
         .AllowAnonymous();
@@ -54,12 +54,16 @@ public static class AuthEndpoints
             if (!authOptions.Value.OtpEnabled)
                 return Results.Problem(detail: "OTP verification is disabled", statusCode: 403);
             var response = await mediator.Send(command);
-            return Results.Ok(new { Token = response.AccessToken });
+            return Results.Ok(new { Token = response.AccessToken, RefreshToken = response.RefreshToken });
         })
         .WithName("VerifyRegistration")
         .AllowAnonymous();
 
-        app.MapPost("/api/auth/logout", () => Results.Ok("Logged out"))
+        app.MapPost("/api/auth/logout", async (LogoutCommand command, IMediator mediator) =>
+        {
+            var ok = await mediator.Send(command);
+            return ok ? Results.Ok(new { message = "با موفقیت خارج شدید" }) : Results.BadRequest(new { error = "logout failed" });
+        })
             .RequireAuthorization();
 
         app.MapPost("/api/auth/check-mobile", async (CheckMobileCommand command, IMediator mediator) =>

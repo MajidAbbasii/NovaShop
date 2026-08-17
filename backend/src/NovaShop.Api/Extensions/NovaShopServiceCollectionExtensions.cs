@@ -173,6 +173,9 @@ public static class NovaShopServiceCollectionExtensions
         // Password hashing (PBKDF2)
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
 
+        // JWT + refresh-token service
+        services.AddScoped<IJwtTokenService, JwtTokenService>();
+
         // OTP store (in-memory; move to Redis for multi-instance)
         services.AddSingleton<OtpStore>();
         services.AddSingleton<PendingRegistrationStore>();

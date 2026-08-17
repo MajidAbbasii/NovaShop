@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NovaShop.Domain.Auth;
 using NovaShop.Domain.Entities;
 
 namespace NovaShop.Infrastructure.Data;
@@ -26,6 +27,7 @@ public class NovaShopDbContext : DbContext
     public DbSet<AppNotification> AppNotifications { get; set; }
     public DbSet<Banner> Banners { get; set; }
     public DbSet<CustomDollRequest> CustomDollRequests { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 
     public NovaShopDbContext(DbContextOptions<NovaShopDbContext> options)
         : base(options)
@@ -306,6 +308,18 @@ public class NovaShopDbContext : DbContext
             r.Property(x => x.Price).HasColumnType("decimal(18,2)");
             r.HasIndex(x => x.UserId);
             r.HasIndex(x => x.Status);
+        });
+
+        // RefreshToken - User (one-to-many: a user can have several active refresh tokens)
+        modelBuilder.Entity<RefreshToken>(rt =>
+        {
+            rt.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            rt.Property(x => x.Token).IsRequired().HasMaxLength(100);
+            rt.HasIndex(x => x.Token).IsUnique();
+            rt.HasIndex(x => x.UserId);
         });
     }
 }

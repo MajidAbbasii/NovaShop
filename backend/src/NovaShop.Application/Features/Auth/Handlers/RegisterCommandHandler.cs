@@ -21,7 +21,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, RegisterR
     private readonly OtpStore _otpStore;
     private readonly ISmsService _smsService;
     private readonly AuthenticationOptions _authOptions;
-    private readonly JwtSettings _jwt;
+    private readonly IJwtTokenService _tokenService;
 
     public RegisterCommandHandler(
         NovaShopDbContext context,
@@ -30,7 +30,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, RegisterR
         OtpStore otpStore,
         ISmsService smsService,
         IOptions<AuthenticationOptions> authOptions,
-        IOptions<JwtSettings> jwt)
+        IJwtTokenService tokenService)
     {
         _context = context;
         _passwordHasher = passwordHasher;
@@ -38,7 +38,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, RegisterR
         _otpStore = otpStore;
         _smsService = smsService;
         _authOptions = authOptions.Value;
-        _jwt = jwt.Value;
+        _tokenService = tokenService;
     }
 
     public async Task<RegisterResult> Handle(RegisterCommand request, CancellationToken cancellationToken)
@@ -112,23 +112,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, RegisterR
         _context.Users.Add(user);
         await _context.SaveChangesAsync(cancellationToken);
 
-        var token = IssueToken(user);
-        return new RegisterResult { Pending = false, UserId = user.Id, Token = token };
-    }
-
-    private string IssueToken(User user)
-    {
-        var claims = new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.Username),
-            new Claim(ClaimTypes.Role, user.Role),
-            new Claim("sub", user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-        };
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.Key!));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        var token = new JwtSecurityToken(_jwt.Issuer, _jwt.Audience, claims, expires: DateTime.UtcNow.AddHours(8), signingCredentials: creds);
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        var login = await _tokenService.GenerateAndPersistAsync(user, cancellationToken);
+        return new RegisterResult { Pending = false, UserId = user.Id, Token = login.AccessToken, RefreshToken = login.RefreshToken };
     }
 }

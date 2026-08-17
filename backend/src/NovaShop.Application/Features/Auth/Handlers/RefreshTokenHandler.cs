@@ -1,65 +1,33 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 using MediatR;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 using NovaShop.Application.Features.Auth.Commands;
+using NovaShop.Application.Services;
 using NovaShop.Common.Models;
+
+namespace NovaShop.Application.Features.Auth.Handlers;
 
 public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, LoginResponse>
 {
-    private readonly JwtSettings _jwt;
+    private readonly IJwtTokenService _tokenService;
 
-    public RefreshTokenCommandHandler(IOptions<JwtSettings> jwt)
+    public RefreshTokenCommandHandler(IJwtTokenService tokenService)
     {
-        _jwt = jwt.Value;
+        _tokenService = tokenService;
     }
 
     public async Task<LoginResponse> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
-        // چک Refresh Token (بعداً از دیتابیس)
         if (string.IsNullOrEmpty(request.RefreshToken))
             throw new UnauthorizedAccessException("Invalid refresh token");
 
-        // تولید Token جدید
-        var newAccessToken = GenerateAccessToken("admin"); // بعداً از UserId
-        var newRefreshToken = GenerateRefreshToken();
+        // Resolve the real user behind the persisted refresh token. A missing,
+        // expired, revoked, or orphaned token is rejected — no role is ever assumed.
+        var user = await _tokenService.ResolveRefreshTokenAsync(request.RefreshToken, cancellationToken);
+        if (user == null)
+            throw new UnauthorizedAccessException("Invalid refresh token");
 
-        return new LoginResponse
-        {
-            AccessToken = newAccessToken,
-            RefreshToken = newRefreshToken,
-            Expires = DateTime.Now.AddHours(8)
-        };
-    }
-
-    private string GenerateRefreshToken()
-    {
-        return Guid.NewGuid().ToString() + "-" + Guid.NewGuid().ToString(); // منحصر به فرد
-    }
-
-    private string GenerateAccessToken(string username)
-    {
-        Claim[] claims =
-        [
-            new Claim(ClaimTypes.Name, username),
-            new Claim(ClaimTypes.Role, "Admin"),
-            new Claim("Permission", "Product.Read"),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-        ];
-
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.Key!));
-
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var token = new JwtSecurityToken(
-            issuer: _jwt.Issuer,
-            audience: _jwt.Audience,
-            claims: claims,
-            expires: DateTime.Now.AddHours(8),
-            signingCredentials: creds);
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        // Rotate: revoke the used token, then issue a fresh access + refresh pair.
+        await _tokenService.RevokeRefreshTokenAsync(request.RefreshToken, cancellationToken);
+        return await _tokenService.GenerateAndPersistAsync(user, cancellationToken);
     }
 }
