@@ -26,7 +26,6 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using OpenTelemetry;
 using System.Text;
-using Prometheus;
 
 namespace NovaShop.Api.Extensions;
 

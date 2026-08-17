@@ -1,14 +1,8 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 using NovaShop.Application.Features.Auth.Commands;
 using NovaShop.Application.Services;
-using NovaShop.Common.Models;
 using NovaShop.Infrastructure.Data;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace NovaShop.Application.Features.Auth.Handlers;
 

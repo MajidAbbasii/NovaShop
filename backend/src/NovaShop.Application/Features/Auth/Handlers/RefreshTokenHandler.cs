@@ -1,8 +1,6 @@
 using MediatR;
-using Microsoft.Extensions.Options;
 using NovaShop.Application.Features.Auth.Commands;
 using NovaShop.Application.Services;
-using NovaShop.Common.Models;
 
 namespace NovaShop.Application.Features.Auth.Handlers;
 

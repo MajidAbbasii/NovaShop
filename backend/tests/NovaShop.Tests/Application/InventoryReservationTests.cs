@@ -11,12 +11,9 @@ using NovaShop.Application.Features.Products.Commands;
 using NovaShop.Application.Features.Products.Handlers;
 using NovaShop.Application.Jobs;
 using NovaShop.Application.Mappers;
-using NovaShop.Application.Messages;
 using NovaShop.Application.Services;
-using NovaShop.Common.Models;
 using NovaShop.Domain.Entities;
 using NovaShop.Domain.Repositories;
-using NovaShop.Domain.Services;
 using NovaShop.Infrastructure.Data;
 using Xunit;
 

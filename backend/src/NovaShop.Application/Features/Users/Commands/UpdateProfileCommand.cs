@@ -1,9 +1,7 @@
 using FluentValidation;
 using MediatR;
 using NovaShop.Infrastructure.Data;
-using NovaShop.Application.Services;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace NovaShop.Application.Features.Users.Commands;
 

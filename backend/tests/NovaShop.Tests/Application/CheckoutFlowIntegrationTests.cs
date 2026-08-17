@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NovaShop.Application.Features.Orders.Commands;
-using NovaShop.Domain.Exceptions;
 using NovaShop.Application.Features.Orders.Handlers;
 using NovaShop.Application.Jobs;
 using NovaShop.Application.Mappers;
