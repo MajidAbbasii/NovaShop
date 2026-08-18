@@ -56,6 +56,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, RegisterR
     {
         if (string.IsNullOrWhiteSpace(request.PhoneNumber))
             throw new InvalidOperationException("شماره موبایل الزامی است");
+
         if (await _context.Users.AnyAsync(u => u.PhoneNumber == request.PhoneNumber, cancellationToken))
             throw new InvalidOperationException("این شماره موبایل قبلاً ثبت شده است");
 
@@ -75,15 +76,18 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, RegisterR
     /// <summary>
     /// Direct registration (OTP disabled): create the user immediately and issue a JWT
     /// so the client can sign them in without an extra verification step.
-    /// Phone is optional; when omitted a unique placeholder keeps the phone unique index valid.
+    /// Phone is mandatory; empty phone causes validation failure.
     /// </summary>
     private async Task<RegisterResult> HandleDirectRegistration(RegisterCommand request, CancellationToken cancellationToken)
     {
-        var phone = string.IsNullOrWhiteSpace(request.PhoneNumber)
-            ? $"unset_{Guid.NewGuid():N}"[..18]
-            : request.PhoneNumber;
+        // Phone is mandatory — do NOT generate a placeholder.
+        if (string.IsNullOrWhiteSpace(request.PhoneNumber))
+            throw new InvalidOperationException("شماره موبایل الزامی است");
 
-        // Email is optional; when omitted derive a non-colliding local address (OTP paths do this too).
+        if (await _context.Users.AnyAsync(u => u.PhoneNumber == request.PhoneNumber, cancellationToken))
+            throw new InvalidOperationException("این شماره موبایل قبلاً ثبت شده است");
+
+        // Email is optional; when omitted derive a non-colliding local address.
         var email = string.IsNullOrWhiteSpace(request.Email)
             ? $"{request.Username}@novashop.local"
             : request.Email;
@@ -95,7 +99,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, RegisterR
             PasswordHash = _passwordHasher.Hash(request.Password),
             FirstName = request.FirstName ?? string.Empty,
             LastName = request.LastName ?? string.Empty,
-            PhoneNumber = phone,
+            PhoneNumber = request.PhoneNumber,
             Address = request.Address ?? string.Empty,
             City = request.City ?? string.Empty,
             PostalCode = request.PostalCode ?? string.Empty,
