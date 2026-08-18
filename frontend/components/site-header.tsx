@@ -97,7 +97,7 @@ export function SiteHeader() {
             <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-sm">
               <Store className="size-5" />
             </div>
-            <span className="hidden text-base font-extrabold tracking-tight sm:inline">
+            <span className="flex text-base font-extrabold tracking-tight sm:inline">
               {t('site.name')}
             </span>
           </Link>
