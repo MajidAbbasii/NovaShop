@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Bell, X, Menu, Heart, Search, Store, Camera } from 'lucide-react';
+import { ShoppingCart, Bell, X, Menu, Heart, Search, Store, Camera, LogIn, UserPlus } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
 import { useLocale } from '@/lib/locale-context';
 import { useAuth } from '@/lib/auth-context';
@@ -143,6 +143,34 @@ export function SiteHeader() {
 
             {/* Language */}
             <LanguageSwitcher />
+
+            {/* Login / Register (logged-out only) */}
+            {!isAuthenticated && (
+              <>
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label={t('header.login')}
+                >
+                  <Link href="/login">
+                    <LogIn className="size-5" />
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label={t('header.register')}
+                >
+                  <Link href="/register">
+                    <UserPlus className="size-5" />
+                  </Link>
+                </Button>
+              </>
+            )}
 
             {/* Wishlist (desktop) */}
             {isAuthenticated && (
