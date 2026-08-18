@@ -1,17 +1,18 @@
 'use client';
 
 import { API_GATEWAY_URL } from './config';
-import { translations as fallbackTranslations, type Locale } from './translations';
+import type { Locale, TranslationMap } from './translations';
 
-// Single authoritative source for UI translations is now the Backend.
+// The Backend database is the SINGLE SOURCE OF TRUTH for UI translations.
 // This client loads the full dictionary per-locale in bulk (one request) and
-// caches it. The static `translations` import is used ONLY as an offline/dev
-// fallback so the UI never renders raw keys when the API is unreachable.
+// caches it. There is intentionally NO static/full dictionary fallback: if the
+// API is unreachable we surface the translation key (or a previously cached
+// value) rather than maintaining a second copy of the translation database.
 
 const memoryCache = new Map<Locale, Record<string, string>>();
 const inFlight = new Map<Locale, Promise<Record<string, string>>>();
 
-export type TranslationMap = Record<string, string>;
+export type { TranslationMap };
 
 async function fetchLocale(locale: Locale): Promise<TranslationMap> {
   const res = await fetch(`${API_GATEWAY_URL}/api/translations?locale=${locale}`, {
@@ -43,7 +44,7 @@ export async function loadTranslations(locale: Locale): Promise<TranslationMap> 
       }
       return map;
     } catch {
-      // 3) persisted cache
+      // 3) persisted cache (last good values, if any)
       try {
         const stored = localStorage.getItem(`novashop-translations-${locale}`);
         if (stored) {
@@ -54,10 +55,11 @@ export async function loadTranslations(locale: Locale): Promise<TranslationMap> 
       } catch {
         /* ignore */
       }
-      // 4) static fallback
-      const fb = (fallbackTranslations[locale] ?? {}) as TranslationMap;
-      memoryCache.set(locale, fb);
-      return fb;
+      // 4) last resort: empty map. The Backend remains authoritative; components
+      //    render the key itself (never a full static dictionary).
+      const empty: TranslationMap = {};
+      memoryCache.set(locale, empty);
+      return empty;
     } finally {
       inFlight.delete(locale);
     }
@@ -67,13 +69,26 @@ export async function loadTranslations(locale: Locale): Promise<TranslationMap> 
   return p;
 }
 
-/** Synchronous read of whatever is currently in the cache (may be fallback). */
+/** Synchronous read of whatever is currently in the cache (may be empty). */
 export function getCachedTranslations(locale: Locale): TranslationMap {
-  return memoryCache.get(locale) ?? ((fallbackTranslations[locale] ?? {}) as TranslationMap);
+  return memoryCache.get(locale) ?? {};
 }
 
-export function primeFromStatic(locale: Locale): TranslationMap {
-  const fb = (fallbackTranslations[locale] ?? {}) as TranslationMap;
-  if (!memoryCache.has(locale)) memoryCache.set(locale, fb);
-  return fb;
+/**
+ * Prime the cache from any previously persisted (last-good) value so the very
+ * first client render has something to show before the API responds. This is
+ * NOT the static dictionary — it is the last successful backend response.
+ */
+export function primeFromPersisted(locale: Locale): TranslationMap {
+  try {
+    const stored = localStorage.getItem(`novashop-translations-${locale}`);
+    if (stored) {
+      const map = JSON.parse(stored) as TranslationMap;
+      if (!memoryCache.has(locale)) memoryCache.set(locale, map);
+      return map;
+    }
+  } catch {
+    /* ignore */
+  }
+  return {};
 }

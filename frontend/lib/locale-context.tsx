@@ -2,12 +2,11 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import {
-  translations as fallbackTranslations,
   type Locale,
   isLocale,
   localeDir,
 } from './translations';
-import { loadTranslations, getCachedTranslations, primeFromStatic, type TranslationMap } from './translation-service';
+import { loadTranslations, getCachedTranslations, primeFromPersisted, type TranslationMap } from './translation-service';
 
 export const STORAGE_KEY = 'novashop-locale';
 export const DEFAULT_LOCALE: Locale = 'fa';
@@ -33,14 +32,13 @@ function interpolate(template: string, args: Record<string, string | number>): s
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
-  // Live dictionary: starts from static fallback, replaced by backend values when fetched.
-  const [dict, setDict] = useState<TranslationMap>(() =>
-    (fallbackTranslations[DEFAULT_LOCALE] ?? {}) as TranslationMap
-  );
+  // Live dictionary: starts empty, replaced by backend values when fetched.
+  // There is no static fallback dictionary — the Backend is the source of truth.
+  const [dict, setDict] = useState<TranslationMap>({});
 
-  // Hydrate locale from storage + prime static dict on first client render.
+  // Hydrate locale from storage + prime from last-good persisted cache.
   useEffect(() => {
-    primeFromStatic(locale);
+    primeFromPersisted(locale);
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved && isLocale(saved)) {
       setLocaleState(saved);
