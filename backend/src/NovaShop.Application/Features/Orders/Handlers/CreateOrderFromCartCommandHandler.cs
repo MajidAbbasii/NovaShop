@@ -116,10 +116,12 @@ public class CreateOrderFromCartCommandHandler : IRequestHandler<CreateOrderFrom
                 }
             }
 
-            // Temporary business mode: online payment disabled → always InPerson (پرداخت حضوری).
-            // When PaymentPolicy:OnlinePaymentEnabled=true this is a no-op (request method passes through).
-            var isInPerson = !PaymentPolicy.OnlinePaymentEnabled
-                || request.PaymentMethod == "InPerson";
+            // Temporary business mode: online payment disabled → always CashOnDelivery
+            // (پرداخت هنگام تحویل). When PaymentPolicy:OnlinePaymentEnabled=true this
+            // is a no-op (request method passes through, after normalization).
+            var paymentMethod = !PaymentPolicy.OnlinePaymentEnabled
+                ? Order.PaymentMethodCashOnDelivery
+                : CreateOrderFromCartCommandValidator.NormalizePaymentMethod(request.PaymentMethod);
 
             // Subtotal is derived from the trusted cart (DB-backed unit prices).
             var subtotal = cart.Items.Sum(i => i.Quantity * i.UnitPrice);
@@ -134,7 +136,7 @@ public class CreateOrderFromCartCommandHandler : IRequestHandler<CreateOrderFrom
                 ShippingCost = 0m,
                 PickupLocation = request.PickupLocation,
                 PickupInstructions = request.PickupInstructions,
-                PaymentMethod = isInPerson ? "InPerson" : request.PaymentMethod,
+                PaymentMethod = paymentMethod,
                 PaymentStatus = Order.PaymentPending,
                 Status = Order.StatusPending,
                 IdempotencyKey = request.IdempotencyKey ?? string.Empty,
@@ -184,7 +186,7 @@ public class CreateOrderFromCartCommandHandler : IRequestHandler<CreateOrderFrom
             {
                 Order = order,
                 Amount = order.TotalAmount,
-                PaymentMethod = request.PaymentMethod,
+                PaymentMethod = paymentMethod,
                 Status = "Pending",
                 TransactionId = string.Empty,
                 IdempotencyKey = string.Empty

@@ -21,6 +21,7 @@ import {
               ImageIcon,
               CameraIcon,
               LanguagesIcon,
+              TruckIcon,
             } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -81,6 +82,7 @@ const NAV_GROUPS: { titleKey: string; items: NavItem[] }[] = [
     titleKey: "admin.settings.title",
     items: [
       { href: "/admin/translations", labelKey: "admin.translations.title", icon: LanguagesIcon },
+      { href: "/admin/shipping-settings", labelKey: "shippingSettings", icon: TruckIcon },
     ],
   },
 ]

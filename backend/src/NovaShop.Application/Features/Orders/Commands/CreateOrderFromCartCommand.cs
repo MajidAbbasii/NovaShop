@@ -2,6 +2,7 @@ using FluentValidation;
 using MediatR;
 using NovaShop.Application.Features.Orders.Dtos;
 using NovaShop.Common.Models;
+using NovaShop.Domain.Entities;
 
 namespace NovaShop.Application.Features.Orders.Commands;
 
@@ -40,15 +41,27 @@ public class CreateOrderFromCartCommandValidator : AbstractValidator<CreateOrder
 
         RuleFor(x => x.PaymentMethod)
             .NotEmpty().WithMessage("روش پرداخت اجباری است")
-            .Must(pm => pm is "InPerson" or "COD" or "CreditCard" or "PayPal" or "BankTransfer" or "Wallet" or "WalletAndOnline")
+            .Must(pm => pm is "InPerson" or "COD" or "CashOnDelivery" or "CreditCard" or "PayPal" or "BankTransfer" or "Wallet" or "WalletAndOnline")
             .WithMessage("روش پرداخت نامعتبر است");
 
-        // Temporary business mode: online payment disabled → only InPerson (پرداخت حضوری) is accepted.
-        // When PaymentPolicy:OnlinePaymentEnabled=true, the allowed set widens automatically.
+        // Temporary business mode: online payment disabled → only cash-on-delivery
+        // (پرداخت هنگام تحویل / InPerson / COD) is accepted. When
+        // PaymentPolicy:OnlinePaymentEnabled=true, the allowed set widens automatically.
         RuleFor(x => x.PaymentMethod)
-            .Must(pm => pm == "InPerson")
+            .Must(pm => IsCashOnDelivery(pm))
             .When(_ => !OnlinePaymentEnabled)
-            .WithMessage("پرداخت آنلاین موقتاً غیرفعال است؛ فقط پرداخت حضوری امکان‌پذیر است");
+            .WithMessage("پرداخت آنلاین موقتاً غیرفعال است؛ فقط پرداخت هنگام تحویل (پرداخت در محل) امکان‌پذیر است");
 
     }
+
+    /// <summary>Normalizes the various accepted spellings to the canonical CashOnDelivery.</summary>
+    public static string NormalizePaymentMethod(string? pm) =>
+        pm switch
+        {
+            "InPerson" or "COD" or "CashOnDelivery" => Order.PaymentMethodCashOnDelivery,
+            _ => pm ?? string.Empty
+        };
+
+    private static bool IsCashOnDelivery(string? pm) =>
+        pm is "InPerson" or "COD" or "CashOnDelivery";
 }

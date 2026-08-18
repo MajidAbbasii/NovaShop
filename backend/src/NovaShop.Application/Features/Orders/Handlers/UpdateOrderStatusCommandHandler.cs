@@ -57,6 +57,17 @@ public class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOrderStatus
 
         var history = order.TransitionTo(request.Status, request.Note, changedByUserId, changedByRole);
 
+        // Cash-on-delivery: payment is collected when the order is delivered.
+        // Update only the PAYMENT status (never the order state machine) so the
+        // workflow stays Confirmed → Processing → ... → Delivered.
+        if (request.Status == Order.StatusDelivered
+            && order.PaymentStatus != Order.PaymentPaid
+            && order.PaymentMethod is Order.PaymentMethodCashOnDelivery or Order.PaymentMethodInPerson or Order.PaymentMethodCod)
+        {
+            order.PaymentStatus = Order.PaymentPaid;
+            order.PaidAt = DateTime.UtcNow;
+        }
+
         // Timestamps (TransitionTo already validated the transition)
         if (request.Status == Order.StatusPaid)
             order.PaidAt = DateTime.UtcNow;

@@ -92,6 +92,7 @@ interface OrderData {
   shippingMethod?: string;
   shippingCost?: number;
   paymentMethod?: string;
+  paymentStatus?: string;
   createdAt: string;
   items: OrderItem[];
   statusHistory?: OrderHistoryEntry[];
@@ -244,11 +245,19 @@ export default function OrderConfirmationPage() {
                 {order.paymentMethod && (
                   <p className="mt-1 text-xs text-muted-foreground">
                     {t('order.paymentMethodLabel')}:{' '}
-                    {order.paymentMethod === 'COD'
+                    {order.paymentMethod === 'CashOnDelivery' || order.paymentMethod === 'COD'
                       ? t('checkout.payment.cod')
                       : order.paymentMethod === 'InPerson'
                         ? t('checkout.payment.inPerson')
                         : t('checkout.payment.online')}
+                  </p>
+                )}
+                {order.paymentStatus && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t('order.paymentStatus')}:{' '}
+                    {order.paymentStatus === 'Paid'
+                      ? t('status.paid')
+                      : t('pendingPayment')}
                   </p>
                 )}
               </div>

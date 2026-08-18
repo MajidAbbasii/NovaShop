@@ -15,6 +15,7 @@ import { useLocale } from '@/lib/locale-context';
 import { formatCurrency } from '@/lib/formatters';
 import { ShoppingBag, Loader2, ArrowLeft, CreditCard, Store, Truck, Mail, Banknote, Tag } from 'lucide-react';
 import { API_GATEWAY_URL, resolveImageUrl } from '@/lib/config';
+import { getShippingMethods, type ShippingMethods } from '@/lib/shipping-api';
 
 interface CustomerInfo {
   fullName: string;
@@ -38,6 +39,23 @@ export default function CheckoutPage() {
   const [info, setInfo] = useState<CustomerInfo>({
     fullName: '', email: '', phone: '', address: '', city: '', postalCode: '',
   });
+
+  // Admin-managed shipping rates (source of truth = backend). Used only to
+  // label the method cards; the order total still comes from the server quote.
+  const [methods, setMethods] = useState<ShippingMethods | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const m = await getShippingMethods();
+        if (!cancelled) setMethods(m);
+      } catch {
+        /* non-fatal: fall back to server quote in summary */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const mounted = useSyncExternalStore(
     () => () => {},
@@ -108,7 +126,7 @@ export default function CheckoutPage() {
         headers,
         body: JSON.stringify({
           shippingAddress: shippingMethod === 'PICKUP' ? `${t('checkout.method.pickup')} — ${info.phone}` : shippingAddr,
-          paymentMethod: 'InPerson',
+          paymentMethod: 'CashOnDelivery',
           shippingMethod,
           phoneNumber: info.phone,
           discountCode: appliedDiscount?.code ?? null,
@@ -270,8 +288,8 @@ export default function CheckoutPage() {
                       <Label>{t('checkout.method.title')}</Label>
                       <div className="grid gap-2 sm:grid-cols-3">
                         {([
-                          { id: 'POST', icon: Mail, title: t('checkout.method.post'), desc: t('checkout.method.post.desc'), cost: subtotal >= 500_000 ? t('checkout.method.free') : formatCurrency(59_900, locale) },
-                          { id: 'COURIER', icon: Truck, title: t('checkout.method.courier'), desc: t('checkout.method.courier.desc'), cost: formatCurrency(129_000, locale) },
+                          { id: 'POST', icon: Mail, title: t('checkout.method.post'), desc: t('checkout.method.post.desc'), cost: methods?.methods.find(m => m.method === 'POST')?.isFree ? t('checkout.method.free') : formatCurrency(methods?.methods.find(m => m.method === 'POST')?.price ?? 59_900, locale) },
+                          { id: 'COURIER', icon: Truck, title: t('checkout.method.courier'), desc: t('checkout.method.courier.desc'), cost: methods?.methods.find(m => m.method === 'COURIER')?.isFree ? t('checkout.method.free') : formatCurrency(methods?.methods.find(m => m.method === 'COURIER')?.price ?? 129_000, locale) },
                           { id: 'PICKUP', icon: Store, title: t('checkout.method.pickup'), desc: t('checkout.method.pickup.desc'), cost: t('checkout.method.free') },
                         ] as const).map((m) => (
                           <button

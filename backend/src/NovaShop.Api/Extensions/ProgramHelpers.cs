@@ -252,6 +252,7 @@ public static class ProgramHelpers
         app.MapBannersEndpoints();
         app.MapCustomDollRequestsEndpoints();
         app.MapTranslationEndpoints();
+        app.MapShippingEndpoints();
 
     }
 }

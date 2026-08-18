@@ -29,6 +29,7 @@ public class NovaShopDbContext : DbContext
     public DbSet<CustomDollRequest> CustomDollRequests { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<Translation> Translations { get; set; }
+    public DbSet<ShippingSetting> ShippingSettings { get; set; }
 
     public NovaShopDbContext(DbContextOptions<NovaShopDbContext> options)
         : base(options)
@@ -337,6 +338,16 @@ public class NovaShopDbContext : DbContext
             t.HasIndex(x => new { x.Key, x.Locale }).IsUnique();
             t.HasIndex(x => x.Locale);
             t.HasIndex(x => new { x.Namespace, x.Locale });
+        });
+
+        // ShippingSetting — admin-managed singleton (Id = 1).
+        modelBuilder.Entity<ShippingSetting>(s =>
+        {
+            s.HasKey(x => x.Id);
+            s.Property(x => x.CourierPrice).HasColumnType("decimal(18,2)");
+            s.Property(x => x.PostPrice).HasColumnType("decimal(18,2)");
+            s.Property(x => x.PostFreeShippingThreshold).HasColumnType("decimal(18,2)");
+            s.Property(x => x.PickupPrice).HasColumnType("decimal(18,2)");
         });
     }
 }

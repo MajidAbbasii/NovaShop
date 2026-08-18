@@ -22,6 +22,11 @@ public class Order
     public const string ShippingCourier = "COURIER";
     public const string ShippingPickup = "PICKUP";
 
+    // Payment methods
+    public const string PaymentMethodCashOnDelivery = "CashOnDelivery";
+    public const string PaymentMethodInPerson = "InPerson";
+    public const string PaymentMethodCod = "COD";
+
     // Payment status constants
     public const string PaymentPending = "Pending";
     public const string PaymentPaid = "Paid";

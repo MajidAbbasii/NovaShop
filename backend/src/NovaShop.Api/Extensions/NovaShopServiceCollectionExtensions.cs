@@ -182,6 +182,9 @@ public static class NovaShopServiceCollectionExtensions
         services.AddSingleton<OtpStore>();
         services.AddSingleton<PendingRegistrationStore>();
 
+        // Admin-managed shipping rates (DB-backed singleton)
+        services.AddScoped<IShippingSettingsRepository, EfShippingSettingsRepository>();
+
         // Register Mapperly mappers as singleton services
         services.AddSingleton<ProductMapper>();
         services.AddSingleton<CartMapper>();
