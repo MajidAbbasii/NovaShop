@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { toast } from '@/hooks/use-toast';
 import { useLocale } from '@/lib/locale-context';
 import { useAuth } from '@/lib/auth-context';
-import { Store, Loader2, KeyRound } from 'lucide-react';
+import { Store, Loader2, Eye, EyeOff } from 'lucide-react';
 import { apiFetch } from '@/lib/admin-api';
 
 export default function LoginPage() {
@@ -19,6 +19,7 @@ export default function LoginPage() {
   const { signIn } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
@@ -72,16 +73,29 @@ export default function LoginPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">{t('auth.password')}</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-                dir={dir}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  dir={dir}
+                  className="pe-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute end-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                </button>
+              </div>
             </div>
+
             <Button
               type="submit"
               className="w-full gap-2 rounded-full"

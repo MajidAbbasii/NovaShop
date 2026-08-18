@@ -6,12 +6,20 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Bell, X, Menu, Heart, Search, Store, Camera, LogIn, UserPlus } from 'lucide-react';
+import { ShoppingCart, Bell, X, Menu, Heart, Search, Store, Camera, LogIn, CircleUser } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
+import { useWishlist } from '@/lib/wishlist-context';
 import { useLocale } from '@/lib/locale-context';
 import { useAuth } from '@/lib/auth-context';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { cn } from '@/lib/utils';
+
+// Shared badge classes for icon buttons (notification / wishlist / cart).
+const iconBadge =
+  'absolute -top-0.5 -end-0.5 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold leading-none text-primary-foreground';
+const iconBtn = (extra = '') =>
+  `relative inline-flex size-9 items-center justify-center whitespace-nowrap rounded-full border-transparent bg-transparent px-0 py-0 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${extra}`;
 
 // --- Notification count hook ---
 function useUnreadNotificationCount() {
@@ -24,8 +32,8 @@ function useUnreadNotificationCount() {
     let cancelled = false;
     fetch(`${API_GATEWAY_URL}/api/notifications/unread-count`, {
       headers: {
-        Authorization: `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') || document.cookie.match(/(?:^|;\s*)token=([^;]*)/)?.[1] : null}`,
-      },
+        Authorization: `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') || document.cookie.match(/(?:^|;\s*)token=([^;]*)/)?.[1] : null}`
+      }
     })
       .then((res) => {
         if (!res.ok) throw new Error('network');
@@ -44,6 +52,7 @@ function useUnreadNotificationCount() {
 
 export function SiteHeader() {
   const { itemCount, openSheet } = useCart();
+  const { wishlistCount } = useWishlist();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { t, dir } = useLocale();
@@ -124,13 +133,13 @@ export function SiteHeader() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-muted-foreground hover:text-foreground"
+                className={cn(iconBtn(), 'relative text-muted-foreground hover:text-foreground')}
                 aria-label={t('notifications.title')}
               >
                 <Link href="/notifications">
                   <Bell className="size-5" />
                   {unreadCount !== null && unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -end-0.5 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold leading-none text-primary-foreground">
+                    <span className={iconBadge}>
                       {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                   )}
@@ -144,32 +153,19 @@ export function SiteHeader() {
             {/* Language */}
             <LanguageSwitcher />
 
-            {/* Login / Register (logged-out only) */}
+            {/* Login (logged-out only) */}
             {!isAuthenticated && (
-              <>
-                <Button
-                  asChild
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground hover:text-foreground"
-                  aria-label={t('header.login')}
-                >
-                  <Link href="/login">
-                    <LogIn className="size-5" />
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground hover:text-foreground"
-                  aria-label={t('header.register')}
-                >
-                  <Link href="/register">
-                    <UserPlus className="size-5" />
-                  </Link>
-                </Button>
-              </>
+              <Button
+                asChild
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-foreground"
+                aria-label={t('header.login')}
+              >
+                <Link href="/login">
+                  <LogIn className="size-5" />
+                </Link>
+              </Button>
             )}
 
             {/* Wishlist (desktop) */}
@@ -177,12 +173,17 @@ export function SiteHeader() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="hidden text-muted-foreground hover:text-foreground md:inline-flex"
-                aria-label={t('wishlist.title')}
+                className="relative hidden text-muted-foreground hover:text-foreground md:inline-flex"
+                aria-label={`${t('wishlist.title')} ${wishlistCount > 0 ? `(${wishlistCount})` : ''}`}
                 asChild
               >
                 <Link href="/wishlist">
                   <Heart className="size-5" />
+                  {wishlistCount > 0 && (
+                    <span className={iconBadge}>
+                      {wishlistCount > 99 ? '99+' : wishlistCount}
+                    </span>
+                  )}
                 </Link>
               </Button>
             )}
@@ -212,11 +213,26 @@ export function SiteHeader() {
             >
               <ShoppingCart className="size-5" />
               {itemCount > 0 && (
-                <span className="absolute -top-0.5 -end-0.5 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold leading-none text-primary-foreground">
+                <span className={iconBadge}>
                   {itemCount > 99 ? '99+' : itemCount}
                 </span>
               )}
             </Button>
+
+            {/* Profile (authenticated users) */}
+            {isAuthenticated && (
+              <Button
+                asChild
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-foreground"
+                aria-label={t('header.profile')}
+              >
+                <Link href="/profile">
+                  <CircleUser className="size-5" />
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
       </header>

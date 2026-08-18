@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { toast } from '@/hooks/use-toast';
 import { useLocale } from '@/lib/locale-context';
 import { useAuth } from '@/lib/auth-context';
-import { Store, Loader2 } from 'lucide-react';
+import { Store, Loader2, Eye, EyeOff } from 'lucide-react';
 import { API_GATEWAY_URL } from '@/lib/config';
 
 type Profile = {
@@ -29,7 +29,7 @@ export default function RegisterPage() {
   const { signIn } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [profile, setProfile] = useState<Profile>({});
   const [loading, setLoading] = useState(false);
 
@@ -46,7 +46,6 @@ export default function RegisterPage() {
         body: JSON.stringify({
           username,
           password,
-          confirmPassword: confirm,
           firstName: profile.firstName || undefined,
           lastName: profile.lastName || undefined,
           email: profile.email || undefined,
@@ -102,27 +101,27 @@ export default function RegisterPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">{t('auth.password')}</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-                dir={dir}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm">{t('auth.confirmPassword')}</Label>
-              <Input
-                id="confirm"
-                type="password"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                required
-                disabled={loading}
-                dir={dir}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  dir={dir}
+                  className="pe-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute end-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                </button>
+              </div>
             </div>
 
             <div className="my-2 border-t border-dashed pt-3 text-xs font-medium text-muted-foreground">

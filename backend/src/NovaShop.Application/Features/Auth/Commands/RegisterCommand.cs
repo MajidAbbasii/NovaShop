@@ -12,7 +12,6 @@ public record RegisterResult
 public record RegisterCommand(
     string Username,
     string Password,
-    string ConfirmPassword,
     string? FirstName,
     string? LastName,
     string? Email,
@@ -31,8 +30,6 @@ public class RegisterCommandValidator : AbstractValidator<RegisterCommand>
             .MinimumLength(3).WithMessage("Username must be at least 3 characters");
         RuleFor(x => x.Password).NotEmpty().WithMessage("Password is required")
             .MinimumLength(6).WithMessage("Password must be at least 6 characters");
-        RuleFor(x => x.ConfirmPassword).Equal(x => x.Password)
-            .WithMessage("Password confirmation does not match");
         RuleFor(x => x.Email).EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.Email))
             .WithMessage("Valid email is required");
         RuleFor(x => x.PhoneNumber)
