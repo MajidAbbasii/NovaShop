@@ -344,6 +344,9 @@ public class NovaShopDbContext : DbContext
         modelBuilder.Entity<ShippingSetting>(s =>
         {
             s.HasKey(x => x.Id);
+            // Singleton: Id is fixed to 1, not database-generated. The repository
+            // always sets Id = ShippingSetting.SingletonId, so identity must be off.
+            s.Property(x => x.Id).ValueGeneratedNever();
             s.Property(x => x.CourierPrice).HasColumnType("decimal(18,2)");
             s.Property(x => x.PostPrice).HasColumnType("decimal(18,2)");
             s.Property(x => x.PostFreeShippingThreshold).HasColumnType("decimal(18,2)");
