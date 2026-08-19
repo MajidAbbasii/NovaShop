@@ -1,4 +1,4 @@
-'use client';
+'use client'
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -82,12 +82,11 @@ export default function LoginPage() {
                   required
                   disabled={loading}
                   dir={dir}
-                  className="pe-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute end-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                   tabIndex={-1}
                 >
@@ -95,7 +94,6 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-
             <Button
               type="submit"
               className="w-full gap-2 rounded-full"
@@ -106,12 +104,10 @@ export default function LoginPage() {
               {t('auth.signInBtn')}
             </Button>
           </form>
-
+          <p className="mt-2 text-center text-sm text-muted-foreground">
+            {t('auth.noAccount')}؟ <a href="/register" className="font-medium text-primary hover:underline" aria-label={t('auth.register')}>ثبت‌نام کنید</a>
+          </p>
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            {t('auth.noAccount')}{' '}
-            <Link href="/register" className="font-medium text-primary hover:underline">
-              {t('auth.register')}
-            </Link>
           </p>
         </CardContent>
       </Card>

@@ -1,4 +1,4 @@
-'use client';
+'use client'
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -110,12 +110,11 @@ export default function RegisterPage() {
                   required
                   disabled={loading}
                   dir={dir}
-                  className="pe-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute end-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                   tabIndex={-1}
                 >
@@ -123,11 +122,9 @@ export default function RegisterPage() {
                 </button>
               </div>
             </div>
-
             <div className="my-2 border-t border-dashed pt-3 text-xs font-medium text-muted-foreground">
               {t('auth.optionalInfo')}
             </div>
-
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="firstName">{t('auth.firstName')}</Label>
@@ -143,7 +140,17 @@ export default function RegisterPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">{t('auth.phone')}</Label>
-                <Input id="phone" type="tel" inputMode="numeric" dir="ltr" placeholder="09123456789" value={profile.phoneNumber ?? ''} onChange={(e) => set('phoneNumber', e.target.value.replace(/[^0-9]/g, ''))} disabled={loading} maxLength={11} />
+                <Input
+                  id="phone"
+                  type="tel"
+                  inputMode="numeric"
+                  dir="ltr"
+                  placeholder="09123456789"
+                  value={profile.phoneNumber ?? ''}
+                  onChange={(e) => set('phoneNumber', e.target.value.replace(/[^0-9]/g, ''))}
+                  disabled={loading}
+                  maxLength={11}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="city">{t('auth.city')}</Label>
@@ -151,14 +158,21 @@ export default function RegisterPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="postalCode">{t('auth.postalCode')}</Label>
-                <Input id="postalCode" inputMode="numeric" dir="ltr" value={profile.postalCode ?? ''} onChange={(e) => set('postalCode', e.target.value.replace(/[^0-9]/g, ''))} disabled={loading} maxLength={20} />
+                <Input
+                  id="postalCode"
+                  inputMode="numeric"
+                  dir="ltr"
+                  value={profile.postalCode ?? ''}
+                  onChange={(e) => set('postalCode', e.target.value.replace(/[^0-9]/g, ''))}
+                  disabled={loading}
+                  maxLength={20}
+                />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="address">{t('auth.address')}</Label>
               <Input id="address" value={profile.address ?? ''} onChange={(e) => set('address', e.target.value)} disabled={loading} dir={dir} />
             </div>
-
             <Button
               type="submit"
               className="w-full gap-2 rounded-full"
