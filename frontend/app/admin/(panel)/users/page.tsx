@@ -36,7 +36,6 @@ import { formatDateShort } from "@/lib/admin-i18n"
 import {
   MoreHorizontalIcon, SearchIcon, XIcon, EyeIcon, PencilIcon, Trash2Icon, Loader2Icon, CameraIcon,
 } from "lucide-react"
-import { ImageUploader } from "@/components/admin/image-uploader"
 
 const PAGE_SIZE = 10
 

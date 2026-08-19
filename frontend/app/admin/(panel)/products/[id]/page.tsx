@@ -23,7 +23,6 @@ import { ErrorState } from "@/components/admin/states"
 import { StockBadge } from "@/components/admin/status-badge"
 import { formatCurrency, formatDateShort } from "@/lib/admin-i18n"
 import { Loader2Icon, PencilIcon, SaveIcon, XIcon, Trash2Icon, ArrowRightIcon } from "lucide-react"
-import { ImageUploader } from "@/components/admin/image-uploader"
 import { ProductMediaEditor, type MediaImage, type MediaColor } from "@/components/admin/product-media-editor"
 
 export default function AdminProductDetailPage() {

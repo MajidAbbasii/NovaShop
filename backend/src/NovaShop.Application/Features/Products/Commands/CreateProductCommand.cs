@@ -1,5 +1,7 @@
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
+using NovaShop.Infrastructure.Data;
 
 namespace NovaShop.Application.Features.Products.Commands;
 
@@ -29,8 +31,12 @@ public record CreateProductCommand : IRequest<int>
 }
 public class CreateProductCommandValidator : AbstractValidator<CreateProductCommand>
 {
-    public CreateProductCommandValidator()
+    private readonly NovaShopDbContext _db;
+
+    public CreateProductCommandValidator(NovaShopDbContext db)
     {
+        _db = db;
+
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("نام محصول اجباری است")
             .MinimumLength(3).WithMessage("نام محصول باید حداقل ۳ کاراکتر باشد");
@@ -45,6 +51,11 @@ public class CreateProductCommandValidator : AbstractValidator<CreateProductComm
             .NotEmpty().WithMessage("تصویر محصول اجباری است");
 
         RuleFor(x => x.CategoryId)
-            .GreaterThan(0).WithMessage("دسته‌بندی محصول اجباری است");
+            .GreaterThan(0).WithMessage("دسته‌بندی محصول اجباری است")
+            .MustAsync(BeExistingCategory)
+            .WithMessage("دسته‌بندی انتخاب‌شده معتبر نیست");
     }
+
+    private async Task<bool> BeExistingCategory(int categoryId, CancellationToken ct)
+        => categoryId <= 0 || await _db.Categories.AnyAsync(c => c.Id == categoryId, ct);
 }

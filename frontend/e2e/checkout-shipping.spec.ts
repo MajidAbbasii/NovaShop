@@ -16,6 +16,18 @@ interface ProductSummary {
   price: number;
 }
 
+interface ShippingMethodDto {
+  method: string;
+  displayKey: string;
+  price: number;
+  isFree: boolean;
+}
+
+interface ShippingMethods {
+  methods: ShippingMethodDto[];
+  postFreeShippingThreshold: number;
+}
+
 async function registerAndLogin(request: APIRequestContext): Promise<string> {
   // Valid Iranian mobile: "09" + 9 digits (11 total).
   const phone = `09${String(Date.now()).slice(-9)}`;
