@@ -163,6 +163,20 @@ export function ImageUploader({
 
   return (
     <div className={cn("w-full space-y-4", className)}>
+      {/* Hoist the file input out of the upload/display branches so the ref
+          always resolves. This makes the "Replace" button work once an image
+          is displayed (the input would otherwise be unmounted and click() a no-op).
+          The value is reset in handleChange so selecting the same file again
+          still fires the change event. */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={accept}
+        onChange={handleChange}
+        className="hidden"
+        disabled={isUploading}
+      />
+
       {!displayUrl ? (
         <div
           className={cn(
@@ -179,15 +193,6 @@ export function ImageUploader({
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
         >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={accept}
-            onChange={handleChange}
-            className="hidden"
-            disabled={isUploading}
-          />
-
           <div className="flex flex-col items-center space-y-4">
             {isUploading ? (
               <Loader2Icon className="h-12 w-12 text-muted-foreground animate-spin" />
