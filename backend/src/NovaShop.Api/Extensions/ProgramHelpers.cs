@@ -57,12 +57,23 @@ public static class ProgramHelpers
         // OpenAPI
         builder.Services.AddOpenApi();
 
-        // CORS
+        // CORS — restricted to known dev/prod origins (API is behind the gateway,
+        // but we never use AllowAnyOrigin). Mirrors the gateway's origin policy.
+        var apiCors = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+        var apiEnv = (Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS") ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var apiAllowed = apiCors.Concat(apiEnv)
+            .Where(o => !string.IsNullOrWhiteSpace(o) && o != "*")
+            .Distinct().ToArray();
+        var origins = apiAllowed.Length > 0
+            ? apiAllowed
+            : new[] { "http://localhost:3000", "http://localhost:3005" };
+
         builder.Services.AddCors(options =>
         {
             options.AddDefaultPolicy(policy =>
             {
-                policy.AllowAnyOrigin()        // برای توسعه
+                policy.WithOrigins(origins)
                       .AllowAnyHeader()
                       .AllowAnyMethod();
             });
@@ -70,6 +81,17 @@ public static class ProgramHelpers
 
         // Anti-forgery (required by form-bound minimal API endpoints)
         builder.Services.AddAntiforgery();
+
+        // Emit Persian/Arabic text as readable UTF-8 JSON (not \uXXXX escapes)
+        // across all minimal-API responses, while staying valid JSON.
+        builder.Services.ConfigureHttpJsonOptions(options =>
+        {
+            options.SerializerOptions.Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
+        });
+        builder.Services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
+        {
+            options.JsonSerializerOptions.Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
+        });
     }
 
     public static void ConfigurePipeline(WebApplication app)

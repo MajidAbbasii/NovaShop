@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useLocale } from '@/lib/locale-context';
 import { formatCurrency } from '@/lib/formatters';
 import { authHeaders, isAuthenticated } from '@/lib/cart-api';
+import { redirectToLogin } from '@/lib/auth-context';
 import { statusKey } from '@/lib/admin-i18n';
 import { PackageSearch, ArrowRight } from 'lucide-react';
 import { API_GATEWAY_URL } from '@/lib/config';
@@ -37,13 +38,15 @@ interface PagedOrders {
 
 export default function OrdersPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { t, dir, locale } = useLocale();
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [error, setError] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated()) {
-      router.replace('/login');
+      redirectToLogin(router, pathname, searchParams);
       return;
     }
     (async () => {

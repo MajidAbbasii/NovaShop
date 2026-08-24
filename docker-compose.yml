@@ -1,8 +1,46 @@
-# NovaShop Monitoring Infrastructure Docker Compose
-version: '3.8'
+# NovaShop Production Deployment Docker Compose
+# Architecture:
+#   Frontend (Next.js) → API Gateway (:5100) → NovaShop.Api (:5000) → SQL Server + Redis
+# NOTE: NovaShop is a 2-service backend (ApiGateway + Api monolith), NOT microservices.
+# Do NOT spawn multiple copies of NovaShop.Api — that would duplicate Hangfire
+# recurring jobs and create competing workers.
 
 services:
-  # NovaShop API Gateway Service
+  # NovaShop API (single monolith — hosts all domains: products, orders, cart,
+  # auth, wishlist, reviews, discounts, admin, notifications, etc.)
+  novashop-api:
+    build:
+      context: .
+      dockerfile: backend/src/NovaShop.Api/Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_URLS=http://+:5000
+      - ASPNETCORE_ENVIRONMENT=Production
+      - CONN_STRING=Server=sqlserver;Database=NovaShopDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - REDIS_CONNECTION_STRING=redis:6379
+      - OTEL_SERVICE_NAME=novashop-api
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - novashop-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "monitoring.enabled=true"
+      - "monitoring.scrape=true"
+      - "monitoring.metrics-endpoint=/metrics"
+
+  # NovaShop API Gateway (YARP reverse proxy + JWT validation + CORS + rate limiting)
   novashop-api-gateway:
     build:
       context: .
@@ -11,20 +49,14 @@ services:
       - "5100:5100"
     environment:
       - ASPNETCORE_URLS=http://+:5100
-      - CONN_STRING=Server=localhost;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - GATEWAY_URL=http://+:5100
+      - ASPNETCORE_ENVIRONMENT=Production
+      - CONN_STRING=Server=sqlserver;Database=NovaShopDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
       - REDIS_CONNECTION_STRING=redis:6379
       - OTEL_SERVICE_NAME=novashop-api-gateway
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
     depends_on:
-      - product-api
-      - category-api
-      - order-api
-      - cart-api
-      - wishlist-api
-      - review-api
-      - auth-api
-      - discount-api
-      - redis
+      - novashop-api
     restart: unless-stopped
     networks:
       - novashop-net
@@ -34,184 +66,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
-    labels:
-      - "monitoring.enabled=true"
-      - "monitoring.scrape=true"
-      - "monitoring.metrics-endpoint=/metrics"
-
-  # Product API Service
-  product-api:
-    build:
-      context: .
-      dockerfile: backend/src/NovaShop.Api/Dockerfile
-    ports:
-      - "5001:80"
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - CONNECTION_STRING=Server=localhost;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
-      - REDIS_CONNECTION_STRING=redis:6379
-      - ASPNETCORE_ENVIRONMENT=Development
-      - OTEL_SERVICE_NAME=product-api
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-    depends_on:
-      - sqlserver
-      - redis
-    restart: unless-stopped
-    networks:
-      - novashop-net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    labels:
-      - "monitoring.enabled=true"
-      - "monitoring.scrape=true"
-      - "monitoring.metrics-endpoint=/metrics"
-
-  # Category API Service
-  category-api:
-    build:
-      context: .
-      dockerfile: backend/src/NovaShop.Api/Dockerfile
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - CONNECTION_STRING=Server=localhost;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
-      - ASPNETCORE_ENVIRONMENT=Development
-      - OTEL_SERVICE_NAME=category-api
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-    depends_on:
-      - sqlserver
-    restart: unless-stopped
-    networks:
-      - novashop-net
-    labels:
-      - "monitoring.enabled=true"
-      - "monitoring.scrape=true"
-      - "monitoring.metrics-endpoint=/metrics"
-
-  # Order API Service
-  order-api:
-    build:
-      context: .
-      dockerfile: backend/src/NovaShop.Api/Dockerfile
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - CONNECTION_STRING=Server=localhost;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
-      - ASPNETCORE_ENVIRONMENT=Development
-      - OTEL_SERVICE_NAME=order-api
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-    depends_on:
-      - sqlserver
-    restart: unless-stopped
-    networks:
-      - novashop-net
-    labels:
-      - "monitoring.enabled=true"
-      - "monitoring.scrape=true"
-      - "monitoring.metrics-endpoint=/metrics"
-
-  # Cart API Service
-  cart-api:
-    build:
-      context: .
-      dockerfile: backend/src/NovaShop.Api/Dockerfile
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - CONNECTION_STRING=Server=localhost;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
-      - ASPNETCORE_ENVIRONMENT=Development
-      - OTEL_SERVICE_NAME=cart-api
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-    depends_on:
-      - sqlserver
-    restart: unless-stopped
-    networks:
-      - novashop-net
-    labels:
-      - "monitoring.enabled=true"
-      - "monitoring.scrape=true"
-      - "monitoring.metrics-endpoint=/metrics"
-
-  # Wishlist API Service
-  wishlist-api:
-    build:
-      context: .
-      dockerfile: backend/src/NovaShop.Api/Dockerfile
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - CONNECTION_STRING=Server=localhost;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
-      - ASPNETCORE_ENVIRONMENT=Development
-      - OTEL_SERVICE_NAME=wishlist-api
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-    depends_on:
-      - sqlserver
-    restart: unless-stopped
-    networks:
-      - novashop-net
-    labels:
-      - "monitoring.enabled=true"
-      - "monitoring.scrape=true"
-      - "monitoring.metrics-endpoint=/metrics"
-
-  # Review API Service
-  review-api:
-    build:
-      context: .
-      dockerfile: backend/src/NovaShop.Api/Dockerfile
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - CONNECTION_STRING=Server=localhost;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
-      - ASPNETCORE_ENVIRONMENT=Development
-      - OTEL_SERVICE_NAME=review-api
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-    depends_on:
-      - sqlserver
-    restart: unless-stopped
-    networks:
-      - novashop-net
-    labels:
-      - "monitoring.enabled=true"
-      - "monitoring.scrape=true"
-      - "monitoring.metrics-endpoint=/metrics"
-
-  # Auth API Service
-  auth-api:
-    build:
-      context: .
-      dockerfile: backend/src/NovaShop.Api/Dockerfile
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - CONNECTION_STRING=Server=localhost;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
-      - ASPNETCORE_ENVIRONMENT=Development
-      - OTEL_SERVICE_NAME=auth-api
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-    depends_on:
-      - sqlserver
-    restart: unless-stopped
-    networks:
-      - novashop-net
-    labels:
-      - "monitoring.enabled=true"
-      - "monitoring.scrape=true"
-      - "monitoring.metrics-endpoint=/metrics"
-
-  # Discount API Service
-  discount-api:
-    build:
-      context: .
-      dockerfile: backend/src/NovaShop.Api/Dockerfile
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - CONNECTION_STRING=Server=localhost;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
-      - ASPNETCORE_ENVIRONMENT=Development
-      - OTEL_SERVICE_NAME=discount-api
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-    depends_on:
-      - sqlserver
-    restart: unless-stopped
-    networks:
-      - novashop-net
     labels:
       - "monitoring.enabled=true"
       - "monitoring.scrape=true"
@@ -232,7 +86,7 @@ services:
       - novashop-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "/opt/mssql/tools/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "YourStrong!Passw0rd", "-Q", "SELECT 1" ]
+      test: ["CMD", "/opt/mssql-tools/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "YourStrong!Passw0rd", "-Q", "SELECT 1" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -256,7 +110,6 @@ services:
       start_period: 30s
 
   # OpenTelemetry Collector
-  # Receives OTLP metrics/traces from all services, exposes Prometheus endpoint on :9090
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     container_name: novashop-otel-collector
@@ -264,7 +117,7 @@ services:
     ports:
       - "4317:4317" # OTLP gRPC
       - "4318:4318" # OTLP HTTP
-      - "9090:9090" # Prometheus metrics endpoint (for OTel self-metrics)
+      - "9090:9090" # Prometheus metrics endpoint
     volumes:
       - ./otel-config.yml:/etc/otel-collector-config.yml:ro
     environment:
@@ -297,8 +150,7 @@ services:
       - '--web.enable-lifecycle'
     depends_on:
       - novashop-api-gateway
-      - product-api
-      - auth-api
+      - novashop-api
       - otel-collector
       - alertmanager
     restart: unless-stopped
@@ -314,7 +166,7 @@ services:
       - "monitoring.type=prometheus"
       - "monitoring.scrape.prometheus=true"
 
-  # Alertmanager (handles Prometheus alerts)
+  # Alertmanager
   alertmanager:
     image: prom/alertmanager:latest
     container_name: novashop-alertmanager
@@ -329,14 +181,6 @@ services:
     restart: unless-stopped
     networks:
       - novashop-net
-    depends_on:
-      - prometheus
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9093/-/healthy" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
     labels:
       - "monitoring.type=alertmanager"
 
@@ -345,7 +189,7 @@ services:
     image: grafana/grafana:latest
     container_name: novashop-grafana
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_SECURITY_ADMIN_USER=admin

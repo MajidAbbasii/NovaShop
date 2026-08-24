@@ -46,14 +46,37 @@ public class Program
         });
 
         // Configure CORS
+        // Allowed origins are config-driven (Cors:AllowedOrigins) and can be
+        // overridden/extended via the CORS_ALLOWED_ORIGINS env var (comma-separated)
+        // for production. We never fall back to AllowAnyOrigin / '*'.
+        var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+        var envOrigins = (Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS") ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var allowedOrigins = configuredOrigins
+            .Concat(envOrigins)
+            .Where(o => !string.IsNullOrWhiteSpace(o) && o != "*")
+            .Distinct()
+            .ToArray();
+
         builder.Services.AddCors(options =>
         {
             options.AddPolicy("GatewayPolicy", policy =>
             {
-                policy.WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>())
-                      .AllowAnyMethod()
-                      .AllowAnyHeader()
-                      .AllowCredentials();
+                if (allowedOrigins.Length > 0)
+                {
+                    policy.WithOrigins(allowedOrigins)
+                          .AllowAnyMethod()
+                          .AllowAnyHeader()
+                          .AllowCredentials();
+                }
+                else
+                {
+                    // Development fallback: only the local dev frontends.
+                    policy.WithOrigins("http://localhost:3000", "http://localhost:3005")
+                          .AllowAnyMethod()
+                          .AllowAnyHeader()
+                          .AllowCredentials();
+                }
             });
         });
 

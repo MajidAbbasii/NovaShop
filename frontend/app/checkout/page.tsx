@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useSyncExternalStore } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import { formatCurrency } from '@/lib/formatters';
 import { ShoppingBag, Loader2, ArrowLeft, CreditCard, Store, Truck, Mail, Banknote, Tag } from 'lucide-react';
 import { API_GATEWAY_URL, resolveImageUrl } from '@/lib/config';
 import { getShippingMethods, type ShippingMethods } from '@/lib/shipping-api';
+import { redirectToLogin } from '@/lib/auth-context';
 
 interface CustomerInfo {
   fullName: string;
@@ -28,6 +29,8 @@ interface CustomerInfo {
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { t, dir, locale } = useLocale();
   const { cart, isLoading, clearAll } = useCart();
   const [submitting, setSubmitting] = useState(false);
@@ -65,9 +68,9 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (!isAuthenticated()) {
-      router.push('/login');
+      redirectToLogin(router, pathname, searchParams);
     }
-  }, [router]);
+  }, [router, pathname, searchParams]);
 
   if (!mounted || isLoading || !cart) {
     return (

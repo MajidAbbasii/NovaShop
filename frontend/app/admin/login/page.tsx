@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,9 +9,12 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { StoreIcon, Loader2Icon, LockIcon, UserIcon } from "lucide-react"
 import { apiFetch } from "@/lib/admin-api"
+import { getSafeReturnUrl } from "@/lib/auth-context"
 
 export default function AdminLoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const returnUrl = getSafeReturnUrl(searchParams.get("returnUrl"))
   const [username, setUsername] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [loading, setLoading] = React.useState(false)
@@ -30,7 +33,7 @@ export default function AdminLoginPage() {
       localStorage.setItem("token", data.token)
       localStorage.setItem("admin-username", username)
       document.cookie = `token=${data.token};path=/;max-age=28800`
-      router.push("/admin")
+      router.push(returnUrl || "/admin")
     } catch (err) {
       setError(
         err instanceof Error && err.message.includes("401")

@@ -26,9 +26,34 @@ export function getTokenCookie(): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+// Only allow internal relative paths as redirect targets (prevents open-redirect).
+export function getSafeReturnUrl(returnUrl?: string | null): string {
+  if (!returnUrl) return '';
+  // Must start with a single slash and not be a protocol-relative //evil.com
+  if (!returnUrl.startsWith('/') || returnUrl.startsWith('//')) return '';
+  return returnUrl;
+}
+
+// Build a /login?returnUrl=... redirect that preserves the current path + query.
+export function redirectToLogin(
+  router: { replace: (url: string) => void },
+  pathname: string,
+  searchParams: { toString: () => string }
+): void {
+  const qs = searchParams.toString();
+  const target = qs ? `${pathname}?${qs}` : pathname;
+  router.replace(`/login?returnUrl=${encodeURIComponent(target)}`);
+}
+
+function base64UrlDecode(input: string): string {
+  const b64 = input.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = b64.length % 4 === 0 ? '' : '='.repeat(4 - (b64.length % 4));
+  return atob(b64 + pad);
+}
+
 function decodeToken(token: string): { id: number; username: string; role: string } | null {
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
+    const payload = JSON.parse(base64UrlDecode(token.split('.')[1]));
     return {
       id: Number(payload.sub),
       username: payload.name

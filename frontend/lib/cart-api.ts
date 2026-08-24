@@ -104,6 +104,12 @@ export function isAuthenticated(): boolean {
 }
 
 // Token helpers needed by authFetch
+function base64UrlDecode(input: string): string {
+  const b64 = input.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = b64.length % 4 === 0 ? '' : '='.repeat(4 - (b64.length % 4));
+  return atob(b64 + pad);
+}
+
 function getToken(): string | null {
   if (typeof document === 'undefined') return null;
   const match = document.cookie.match(/(?:^|;\s*)token=([^;]*)/);
@@ -112,7 +118,7 @@ function getToken(): string | null {
 
 function decodeToken(token: string): { sub: number; role: string } | null {
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
+    const payload = JSON.parse(base64UrlDecode(token.split('.')[1]));
     return { sub: Number(payload.sub), role: payload.role ?? '' };
   } catch {
     return null;

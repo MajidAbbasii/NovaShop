@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLocale } from '@/lib/locale-context';
 import { authHeaders, isAuthenticated } from '@/lib/cart-api';
+import { redirectToLogin } from '@/lib/auth-context';
 import { Bell, Package, CreditCard, Truck, Home, Wallet, CheckCheck, ShoppingBag, Camera } from 'lucide-react';
 import { API_GATEWAY_URL } from '@/lib/config';
 import { cn } from '@/lib/utils';
@@ -50,6 +51,8 @@ function relatedHref(n: AppNotification): string | null {
 
 export default function NotificationsPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { t, dir, locale } = useLocale();
   const [items, setItems] = useState<AppNotification[] | null>(null);
   const [error, setError] = useState(false);
@@ -69,7 +72,7 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     if (!isAuthenticated()) {
-      router.replace('/login');
+      redirectToLogin(router, pathname, searchParams);
       return;
     }
     load();

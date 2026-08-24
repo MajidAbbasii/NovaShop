@@ -30,6 +30,15 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
             CategoryId = request.CategoryId,
         };
 
+        var orderedImages = request.Images.OrderBy(i => i.DisplayOrder).ToList();
+        if (string.IsNullOrWhiteSpace(request.ImageUrl) && orderedImages.Count > 0)
+        {
+            // Legacy ImageUrl/PrimaryImageUrl fall back to the uploaded primary image
+            // so storefront list/gallery rendering works without a separate URL.
+            var primary = orderedImages.FirstOrDefault(i => i.IsPrimary) ?? orderedImages[0];
+            product.ImageUrl = primary.Url;
+        }
+
         foreach (var color in request.Colors)
         {
             product.Colors.Add(new ProductColor

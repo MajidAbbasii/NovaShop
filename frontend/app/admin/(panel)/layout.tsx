@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
   LayoutDashboardIcon,
   PackageIcon,
@@ -99,14 +99,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     () => t('admin.brand')
   )
 
+  const guardPath = usePathname()
+  const searchParams = useSearchParams()
   React.useEffect(() => {
     const token =
       localStorage.getItem("token") ||
-      document.cookie.match(/(?:^|;\\s*)token=([^;]*)/)?.[1]
+      document.cookie.match(/(?:^|;\s*)token=([^;]*)/)?.[1]
     if (!token) {
-      router.replace("/admin/login")
+      const qs = searchParams.toString()
+      const target = qs ? `${guardPath}?${qs}` : guardPath
+      router.replace(`/admin/login?returnUrl=${encodeURIComponent(target)}`)
     }
-  }, [router])
+  }, [router, guardPath, searchParams])
 
   const handleLogout = async () => {
     await adminLogout()

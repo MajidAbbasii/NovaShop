@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useCart } from '@/lib/cart-context';
 import { computeSubtotal, isAuthenticated } from '@/lib/cart-api';
+import { redirectToLogin } from '@/lib/auth-context';
 import { resolveImageUrl } from '@/lib/config';
 import { useLocale } from '@/lib/locale-context';
 import { formatCurrency } from '@/lib/formatters';
@@ -24,6 +25,8 @@ import { useEffect, useSyncExternalStore } from 'react';
 
 export default function CartPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { t, dir, locale } = useLocale();
   const { cart, isLoading, updateQuantity, removeItem } = useCart();
   const mounted = useSyncExternalStore(
@@ -33,8 +36,8 @@ export default function CartPage() {
   );
 
   useEffect(() => {
-    if (!isAuthenticated()) router.push('/login');
-  }, [router]);
+    if (!isAuthenticated()) redirectToLogin(router, pathname, searchParams);
+  }, [router, pathname, searchParams]);
 
   if (!mounted || isLoading) {
     return (

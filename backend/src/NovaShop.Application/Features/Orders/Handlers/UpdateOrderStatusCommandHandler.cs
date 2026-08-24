@@ -117,6 +117,51 @@ public class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOrderStatus
                 });
             }
         }
+        else if (request.Status == Order.StatusDelivered)
+        {
+            // Completion: the reserved units are now permanently sold. Clear the
+            // reservation so ReservedQuantity returns to 0. Idempotent — a no-op
+            // when already cleared (e.g. orders paid earlier via ProcessPayment).
+            foreach (var item in order.Items)
+            {
+                var product = item.Product;
+                if (product == null) continue;
+                if (product.ReservedQuantity <= 0) continue;
+
+                product.ConfirmReservation();
+                _context.InventoryTransactions.Add(new InventoryTransaction
+                {
+                    ProductId = item.ProductId,
+                    OrderId = order.Id,
+                    Type = InventoryTransaction.TypeConfirm,
+                    Quantity = item.Quantity,
+                    StockBefore = product.StockBefore,
+                    StockAfter = product.StockAfter,
+                    Reference = $"delivered-order-{order.Id}"
+                });
+            }
+        }
+        else if (request.Status == Order.StatusReturned)
+        {
+            // Return: restore the sold units back to available stock.
+            foreach (var item in order.Items)
+            {
+                var product = item.Product;
+                if (product == null) continue;
+
+                product.Stock += item.Quantity;
+                _context.InventoryTransactions.Add(new InventoryTransaction
+                {
+                    ProductId = item.ProductId,
+                    OrderId = order.Id,
+                    Type = InventoryTransaction.TypeRelease,
+                    Quantity = item.Quantity,
+                    StockBefore = product.Stock - item.Quantity,
+                    StockAfter = product.Stock,
+                    Reference = $"returned-order-{order.Id}"
+                });
+            }
+        }
 
         await _context.SaveChangesAsync(cancellationToken);
 

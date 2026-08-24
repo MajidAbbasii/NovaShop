@@ -48,7 +48,9 @@ public class CreateProductCommandValidator : AbstractValidator<CreateProductComm
             .GreaterThanOrEqualTo(0).WithMessage("موجودی نمی‌تواند منفی باشد");
 
         RuleFor(x => x.ImageUrl)
-            .NotEmpty().WithMessage("تصویر محصول اجباری است");
+            .NotEmpty().WithMessage("تصویر محصول اجباری است")
+            .When(x => x.Images.Count == 0)
+            .WithMessage("حداقل یک تصویر (آدرس یا آپلود) برای محصول لازم است");
 
         RuleFor(x => x.CategoryId)
             .GreaterThan(0).WithMessage("دسته‌بندی محصول اجباری است")

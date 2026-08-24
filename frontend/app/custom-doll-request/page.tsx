@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,12 +11,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { ImageUploader } from "@/components/admin/image-uploader";
 import { useLocale } from "@/lib/locale-context";
 import { isAuthenticated } from "@/lib/cart-api";
+import { redirectToLogin } from "@/lib/auth-context";
 import { createCustomDollRequest } from "@/lib/custom-doll-api";
 import { toast } from "@/hooks/use-toast";
 import { Camera, Loader2, ListChecks } from "lucide-react";
 
 export default function NewCustomDollRequestPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { t, dir } = useLocale();
   const [imageUrl, setImageUrl] = useState<string>("");
   const [description, setDescription] = useState("");
@@ -25,11 +28,11 @@ export default function NewCustomDollRequestPage() {
 
   useEffect(() => {
     if (!isAuthenticated()) {
-      router.replace("/login");
+      redirectToLogin(router, pathname, searchParams);
       return;
     }
     setAuthed(true);
-  }, [router]);
+  }, [router, pathname, searchParams]);
 
   if (!authed) return null;
 

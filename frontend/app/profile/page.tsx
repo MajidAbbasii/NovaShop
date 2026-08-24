@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +16,8 @@ import { toast } from '@/hooks/use-toast';
 
 export default function ProfilePage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { t, dir } = useLocale();
   const { user, signOut } = useAuth();
   const mounted = useSyncExternalStore(
@@ -38,9 +40,11 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!isAuthenticated()) {
-      router.replace('/login');
+      const qs = searchParams.toString();
+      const target = qs ? `${pathname}?${qs}` : pathname;
+      router.replace(`/login?returnUrl=${encodeURIComponent(target)}`);
     }
-  }, [router]);
+  }, [router, pathname, searchParams]);
 
   useEffect(() => {
     if (!mounted) return;

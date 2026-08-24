@@ -20,7 +20,10 @@ public static class WalletEndpoints
             int pageSize = 50) =>
         {
             if (!PaymentPolicy.WalletEnabled)
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
+                return Results.Problem(
+                    detail: "کیف پول در حال حاضر غیرفعال است و در دسترس نیست.",
+                    title: "Wallet Disabled",
+                    statusCode: StatusCodes.Status403Forbidden);
             var userId = GetUserId(httpContext);
             if (userId == null) return Results.Unauthorized();
 
@@ -72,7 +75,10 @@ public static class WalletEndpoints
             HttpContext httpContext) =>
         {
             if (!PaymentPolicy.WalletEnabled)
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
+                return Results.Problem(
+                    detail: "کیف پول در حال حاضر غیرفعال است و در دسترس نیست.",
+                    title: "Wallet Disabled",
+                    statusCode: StatusCodes.Status403Forbidden);
             var userId = GetUserId(httpContext);
             if (userId == null) return Results.Unauthorized();
 

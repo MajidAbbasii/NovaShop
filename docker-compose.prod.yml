@@ -1,134 +1,60 @@
-version: '3.8'
+# NovaShop Production Docker Compose (app + infra only, no monitoring stack)
+# Architecture:
+#   Nginx (serves prebuilt Frontend) → API Gateway (:5100) → NovaShop.Api (:5000) → SQL Server + Redis
+# NOTE: NovaShop is a 2-service backend (ApiGateway + Api monolith), NOT microservices.
+# Do NOT spawn multiple copies of NovaShop.Api — that would duplicate Hangfire
+# recurring jobs and create competing workers.
 
 services:
+  # NovaShop API (single monolith — all domains)
+  novashop-api:
+    build: ./backend/src/NovaShop.Api
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_URLS=http://+:5000
+      - ASPNETCORE_ENVIRONMENT=Production
+      - CONN_STRING=Server=sqlserver;Database=NovaShopDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - REDIS_CONNECTION_STRING=redis:6379
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - novashop-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # NovaShop API Gateway (YARP reverse proxy)
   novashop-api-gateway:
     build: ./backend/src/NovaShop.ApiGateway
     ports:
       - "5100:5100"
     environment:
       - ASPNETCORE_URLS=http://+:5100
-      - CONN_STRING=Server=sqlserver;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
+      - GATEWAY_URL=http://+:5100
+      - ASPNETCORE_ENVIRONMENT=Production
+      - CONN_STRING=Server=sqlserver;Database=NovaShopDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
       - REDIS_CONNECTION_STRING=redis:6379
     depends_on:
-      - product-api
-      - category-api
-      - order-api
-      - cart-api
-      - wishlist-api
-      - review-api
-      - auth-api
-      - discount-api
-      - redis
+      - novashop-api
     restart: unless-stopped
     networks:
       - novashop-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5100/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
-  product-api:
-    build: ./backend/src/NovaShop.Api
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - CONNECTION_STRING=Server=sqlserver;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
-      - REDIS_CONNECTION_STRING=redis:6379
-      - ASPNETCORE_ENVIRONMENT=Production
-      - OTEL_SERVICE_NAME=product-api
-    depends_on:
-      - sqlserver
-      - redis
-    restart: unless-stopped
-    networks:
-      - novashop-net
-
-  category-api:
-    build: ./backend/src/NovaShop.Api
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - CONNECTION_STRING=Server=sqlserver;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
-      - ASPNETCORE_ENVIRONMENT=Production
-      - OTEL_SERVICE_NAME=category-api
-    depends_on:
-      - sqlserver
-    restart: unless-stopped
-    networks:
-      - novashop-net
-
-  order-api:
-    build: ./backend/src/NovaShop.Api
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - CONNECTION_STRING=Server=sqlserver;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
-      - ASPNETCORE_ENVIRONMENT=Production
-      - OTEL_SERVICE_NAME=order-api
-    depends_on:
-      - sqlserver
-    restart: unless-stopped
-    networks:
-      - novashop-net
-
-  cart-api:
-    build: ./backend/src/NovaShop.Api
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - CONNECTION_STRING=Server=sqlserver;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
-      - ASPNETCORE_ENVIRONMENT=Production
-      - OTEL_SERVICE_NAME=cart-api
-    depends_on:
-      - sqlserver
-    restart: unless-stopped
-    networks:
-      - novashop-net
-
-  wishlist-api:
-    build: ./backend/src/NovaShop.Api
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - CONNECTION_STRING=Server=sqlserver;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
-      - ASPNETCORE_ENVIRONMENT=Production
-      - OTEL_SERVICE_NAME=wishlist-api
-    depends_on:
-      - sqlserver
-    restart: unless-stopped
-    networks:
-      - novashop-net
-
-  review-api:
-    build: ./backend/src/NovaShop.Api
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - CONNECTION_STRING=Server=sqlserver;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
-      - ASPNETCORE_ENVIRONMENT=Production
-      - OTEL_SERVICE_NAME=review-api
-    depends_on:
-      - sqlserver
-    restart: unless-stopped
-    networks:
-      - novashop-net
-
-  auth-api:
-    build: ./backend/src/NovaShop.Api
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - CONNECTION_STRING=Server=sqlserver;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
-      - ASPNETCORE_ENVIRONMENT=Production
-      - OTEL_SERVICE_NAME=auth-api
-    depends_on:
-      - sqlserver
-    restart: unless-stopped
-    networks:
-      - novashop-net
-
-  discount-api:
-    build: ./backend/src/NovaShop.Api
-    environment:
-      - ASPNETCORE_URLS=http://+:80
-      - CONNECTION_STRING=Server=sqlserver;Database=master;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True
-      - ASPNETCORE_ENVIRONMENT=Production
-      - OTEL_SERVICE_NAME=discount-api
-    depends_on:
-      - sqlserver
-    restart: unless-stopped
-    networks:
-      - novashop-net
-
+  # SQL Server Database
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
@@ -142,7 +68,14 @@ services:
     networks:
       - novashop-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "YourStrong!Passw0rd", "-Q", "SELECT 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
+  # Redis Cache
   redis:
     image: redis:7-alpine
     ports:
@@ -152,15 +85,22 @@ services:
     networks:
       - novashop-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
+  # Nginx serves the prebuilt Frontend static build.
+  # Build the frontend first: cd frontend && npm ci && npm run build
   nginx:
     image: nginx:alpine
     ports:
       - "80:80"
-      - "443:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./frontend/build:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - novashop-api-gateway
     restart: unless-stopped

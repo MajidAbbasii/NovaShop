@@ -1,9 +1,23 @@
 using System.Net;
+using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using NovaShop.Domain.Exceptions;
 
 namespace NovaShop.Api.Middleware;
+
+// Serialize Persian/Arabic text as readable UTF-8 (not \uXXXX escapes) while
+// keeping the response valid JSON. The browser decodes it correctly either way,
+// but escaped sequences break some logging/display paths and are harder to read.
+public static class ApiJson
+{
+    public static readonly JsonSerializerOptions Options = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+}
 
 public class ExceptionHandlingMiddleware
 {
@@ -46,8 +60,8 @@ public class ExceptionHandlingMiddleware
             Status = (int)status
         };
 
-        var json = JsonSerializer.Serialize(problem);
-        context.Response.ContentType = "application/problem+json";
+        var json = JsonSerializer.Serialize(problem, ApiJson.Options);
+        context.Response.ContentType = "application/problem+json; charset=utf-8";
         context.Response.StatusCode = (int)status;
         return context.Response.WriteAsync(json);
     }

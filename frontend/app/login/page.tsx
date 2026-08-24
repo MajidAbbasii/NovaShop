@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,17 +10,21 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { toast } from '@/hooks/use-toast';
 import { useLocale } from '@/lib/locale-context';
 import { useAuth } from '@/lib/auth-context';
+import { getSafeReturnUrl } from '@/lib/auth-context';
 import { Store, Loader2, Eye, EyeOff } from 'lucide-react';
 import { apiFetch } from '@/lib/admin-api';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t, dir } = useLocale();
   const { signIn } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const returnUrl = getSafeReturnUrl(searchParams.get('returnUrl'));
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +36,7 @@ export default function LoginPage() {
       });
       signIn(data.token);
       toast({ title: t('auth.loginSuccess') });
-      router.push('/products');
+      router.push(returnUrl || '/products');
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : '';
       const isAuthFailure = message.includes('401') || message.includes('403');

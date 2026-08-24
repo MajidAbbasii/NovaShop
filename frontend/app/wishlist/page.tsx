@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLocale } from '@/lib/locale-context';
 import { formatCurrency } from '@/lib/formatters';
 import { authHeaders, isAuthenticated, addToCart } from '@/lib/cart-api';
+import { redirectToLogin } from '@/lib/auth-context';
 import { API_GATEWAY_URL } from '@/lib/config';
 import { Heart, Loader2, ShoppingBag, Trash2 } from 'lucide-react';
 
@@ -23,13 +24,15 @@ interface WishlistItem {
 
 export default function WishlistPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { t, dir, locale } = useLocale();
   const [items, setItems] = useState<WishlistItem[] | null>(null);
   const [error, setError] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated()) {
-      router.replace('/login');
+      redirectToLogin(router, pathname, searchParams);
       return;
     }
     (async () => {

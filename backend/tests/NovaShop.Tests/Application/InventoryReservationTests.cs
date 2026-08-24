@@ -327,6 +327,38 @@ public class InventoryReservationTests
     }
 
     // ====================================================================
+    // TEST: Delivered (completion) clears the reservation
+    // ====================================================================
+    [Fact]
+    public async Task DeliverOrder_ClearsReservation_KeepsStockDeducted()
+    {
+        var dbName = $"{nameof(DeliverOrder_ClearsReservation_KeepsStockDeducted)}_{Guid.NewGuid():N}";
+        var p = new Product { Id = 1, Name = "P1", Price = 10m, Stock = 3, CategoryId = 1 };
+        var order = new Order { UserId = 1, TotalAmount = 20m, Status = Order.StatusShipped, PaymentStatus = Order.PaymentPending };
+        order.AddItem(new OrderItem { ProductId = 1, Quantity = 2, UnitPrice = 10m, Product = p });
+        // Simulate reservation already done at order creation
+        p.ReserveStock(2, DateTime.UtcNow.AddMinutes(15));
+
+        var ctx = await SeedAsync(dbName, db =>
+        {
+            db.Products.Add(p);
+            db.Orders.Add(order);
+        });
+        await AddPaymentAsync(ctx, order, "InPerson", 20m, "Pending");
+
+        var handler = new UpdateOrderStatusCommandHandler(
+            ctx, new OrderMapper(), Mock.Of<INotificationService>(),
+            Mock.Of<ILogger<UpdateOrderStatusCommandHandler>>());
+
+        await handler.Handle(new UpdateOrderStatusCommand(order.Id, "Delivered", "Admin"), default);
+
+        var saved = await ctx.Products.FindAsync(1);
+        // Stock stays deducted (3 - 2 = 1); reservation cleared so it doesn't corrupt counts
+        Assert.Equal(1, saved!.Stock);
+        Assert.Equal(0, saved.ReservedQuantity);
+    }
+
+    // ====================================================================
     // TEST: Admin stock update below reserved quantity throws
     // ====================================================================
     [Fact]

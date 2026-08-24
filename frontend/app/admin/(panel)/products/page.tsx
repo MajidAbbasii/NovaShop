@@ -122,7 +122,7 @@ export default function AdminProductsPage() {
     <div className='space-y-4'>
       <PageHeader
         title='محصولات'
-        description={data?.totalCount.toLocaleString('fa-IR') ?? ''} محصول فروشگاه
+        description={`${data?.totalCount.toLocaleString('fa-IR') ?? ''} محصول فروشگاه`}
         breadcrumbs={[
           { label: 'داشبورد', href: '/admin' },
           { label: 'محصولات' },
@@ -216,6 +216,7 @@ export default function AdminProductsPage() {
                           <ImageOffIcon className='size-4 text-muted-foreground' />
                         </div>
                       )
+                      }
                     </TableCell>
                     <TableCell>
                       <p className='text-sm font-medium'>{p.name}</p>
@@ -266,7 +267,7 @@ export default function AdminProductsPage() {
           </div>
         )}
       </div>
-    ){data && data.items.length > 0 && (
+    {data && data.items.length > 0 && (
       <Pagination page={page} totalPages={data.totalPages} totalCount={data.totalCount} pageSize={PAGE_SIZE} onChange={setPage} />
     )}
     <ConfirmDialog
@@ -278,5 +279,6 @@ export default function AdminProductsPage() {
       loading={deleting}
       onConfirm={handleDelete}
     />
+    </div>
   )
 }

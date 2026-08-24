@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocale } from "@/lib/locale-context";
 import { isAuthenticated } from "@/lib/cart-api";
+import { redirectToLogin } from "@/lib/auth-context";
 import { getMyCustomDollRequest, acceptCustomDollRequest, type CustomDollRequest } from "@/lib/custom-doll-api";
 import { resolveImageUrl } from "@/lib/config";
 import { formatCurrency } from "@/lib/formatters";
@@ -40,6 +41,8 @@ function statusBadge(status: string, t: (k: string) => string) {
 export default function CustomDollRequestDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { t, dir, locale } = useLocale();
   const [req, setReq] = useState<CustomDollRequest | null>(null);
   const [error, setError] = useState(false);
@@ -47,7 +50,7 @@ export default function CustomDollRequestDetailPage() {
 
   useEffect(() => {
     if (!isAuthenticated()) {
-      router.replace("/login");
+      redirectToLogin(router, pathname, searchParams);
       return;
     }
     setAuthed(true);
