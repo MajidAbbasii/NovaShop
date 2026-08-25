@@ -1,0 +1,2 @@
+# Keep the uploaded-images directory in Git without tracking upload contents.
+# Runtime uploads (products/custom-dolls) are git-ignored (see root .gitignore).
