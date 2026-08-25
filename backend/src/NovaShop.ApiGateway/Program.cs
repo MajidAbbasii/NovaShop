@@ -2,6 +2,7 @@ using System.Threading.RateLimiting;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Prometheus;
+using Microsoft.AspNetCore.HttpOverrides;
 
 namespace NovaShop.ApiGateway;
 
@@ -110,7 +111,31 @@ public class Program
 
         builder.WebHost.UseUrls(Environment.GetEnvironmentVariable("GATEWAY_URL") ?? "http://localhost:5100");
 
+        // Reverse-proxy (Render) forwarded-header handling. The gateway is only reachable
+        // through the proxy edge, so trust forwarded headers from the known proxy hop
+        // (loopback + private/CGNAT ranges) to derive the original https scheme/host.
+        builder.Services.Configure<ForwardedHeadersOptions>(options =>
+        {
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
+                | ForwardedHeaders.XForwardedProto
+                | ForwardedHeaders.XForwardedHost;
+            options.RequireHeaderSymmetry = false;
+            options.ForwardLimit = null;
+            options.KnownProxies.Clear();
+            options.KnownIPNetworks.Clear();
+            options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("127.0.0.1/8"));
+            options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("10.0.0.0/8"));
+            options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("172.16.0.0/12"));
+            options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("192.168.0.0/16"));
+            options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("100.64.0.0/10"));
+            options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("169.254.0.0/16"));
+        });
+
         var app = builder.Build();
+
+        // Honor forwarded headers BEFORE HTTPS redirection so the original public scheme
+        // (https) is observed and no redirect loop occurs. Also before CORS/auth.
+        app.UseForwardedHeaders();
 
         if (app.Environment.IsDevelopment())
         {

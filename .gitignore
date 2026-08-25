@@ -53,6 +53,34 @@ crash.log
 !.env.example
 !.env.k6.example
 !.k6.env.example
+# .NET User Secrets (secrets.json) must never be committed
+**/secrets.json
+
+######################
+# Local database files
+######################
+*.mdf
+*.ldf
+*.db
+*.sqlite
+*.sqlite3
+App_Data/
+
+######################
+# Uploaded / generated images
+# Seed/demo images use remote URLs (picsum.photos); the only files here are
+# runtime uploads written by LocalImageStorage. Keep them out of Git (and they
+# are ephemeral on Render Free). Preserve the directory via .gitkeep.
+######################
+**/wwwroot/images/**
+!**/wwwroot/images/.gitkeep
+
+######################
+# Generated audit / cleanup reports
+######################
+*CLEANUP-REPORT.md
+*AUDIT.md
+*DEPLOYMENT-AUDIT.md
 
 ######################
 # IDE

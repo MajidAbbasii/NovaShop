@@ -12,6 +12,7 @@ using NovaShop.Api.Middleware;
 using NovaShop.Api.RateLimiting;
 using NovaShop.Common.Models;
 using Prometheus;
+using Microsoft.AspNetCore.HttpOverrides;
 
 namespace NovaShop.Api.Extensions;
 
@@ -53,6 +54,28 @@ public static class ProgramHelpers
 
         // HttpClient
         builder.Services.AddHttpClient("default");
+
+        // Reverse-proxy (Render / YARP) forwarded-header handling.
+        // The app is only reachable through the proxy edge, so we trust forwarded headers
+        // from the known proxy hop (loopback + private/CGNAT ranges) and reject them from
+        // any directly-connected untrusted source. This makes Request.Scheme = https for
+        // the original public request so UseHttpsRedirection() does NOT loop.
+        builder.Services.Configure<ForwardedHeadersOptions>(options =>
+        {
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
+                | ForwardedHeaders.XForwardedProto
+                | ForwardedHeaders.XForwardedHost;
+            options.RequireHeaderSymmetry = false;
+            options.ForwardLimit = null;
+            options.KnownProxies.Clear();
+            options.KnownIPNetworks.Clear();
+            options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("127.0.0.1/8"));
+            options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("10.0.0.0/8"));
+            options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("172.16.0.0/12"));
+            options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("192.168.0.0/16"));
+            options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("100.64.0.0/10"));
+            options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("169.254.0.0/16"));
+        });
 
         // OpenAPI
         builder.Services.AddOpenApi();
@@ -96,6 +119,11 @@ public static class ProgramHelpers
 
     public static void ConfigurePipeline(WebApplication app)
     {
+        // Honor reverse-proxy forwarded headers (Render terminates TLS at the edge).
+        // MUST run before UseHttpsRedirection / UseCors / auth — it rewrites Scheme/Host
+        // from X-Forwarded-Proto / X-Forwarded-Host so we don't infinitely redirect HTTP->HTTPS.
+        app.UseForwardedHeaders();
+
         // Seed Data - Database Migration
         using (var scope = app.Services.CreateScope())
         {

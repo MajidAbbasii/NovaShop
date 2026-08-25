@@ -17,6 +17,9 @@ RUN dotnet publish "NovaShop.Api.csproj" -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
+# Install curl so the container healthcheck (curl -f http://localhost:5000/health) can run.
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/publish .
 
 # Copy entrypoint script and make it executable
