@@ -10,7 +10,7 @@ using NovaShop.Domain.Services;
 using NovaShop.Infrastructure.Data;
 using NovaShop.Infrastructure.Services;
 using System.Net.Http.Headers;
-using Testcontainers.MsSql;
+using Testcontainers.PostgreSql;
 using Testcontainers.Redis;
 using Xunit;
 
@@ -18,31 +18,37 @@ namespace NovaShop.Tests;
 
 public class IntegrationWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private MsSqlContainer? _sqlContainer;
+    private PostgreSqlContainer? _pgContainer;
     private RedisContainer? _redisContainer;
 
     public async Task InitializeAsync()
     {
-        var sqlBuilder = new MsSqlBuilder()
-            .WithImage("mcr.microsoft.com/mssql/server:2022-latest")
-            .WithEnvironment("ACCEPT_EULA", "Y")
+        var pgBuilder = new PostgreSqlBuilder()
+            .WithImage("postgres:16-alpine")
+            .WithDatabase("NovaShopTest")
+            .WithUsername("novashop")
+            .WithPassword("novashop-test")
             .WithCleanUp(true);
 
         var redisBuilder = new RedisBuilder()
             .WithImage("redis:latest")
             .WithCleanUp(true);
 
-        _sqlContainer = sqlBuilder.Build();
+        _pgContainer = pgBuilder.Build();
         _redisContainer = redisBuilder.Build();
 
-        await _sqlContainer.StartAsync();
+        await _pgContainer.StartAsync();
         await _redisContainer.StartAsync();
 
-        var sqlPort = _sqlContainer.GetMappedPublicPort(1433);
+        var pgPort = _pgContainer.GetMappedPublicPort(5432);
         var redisPort = _redisContainer.GetMappedPublicPort(6379);
 
-        Environment.SetEnvironmentVariable("SQL_CONNECTION_STRING", $"Server=localhost,{sqlPort};Database=NovaShopTest;User Id=sa;Password={MsSqlBuilder.DefaultPassword};TrustServerCertificate=True");
+        var pgConn = $"Host=localhost;Port={pgPort};Database=NovaShopTest;Username=novashop;Password=novashop-test;TrustServerCertificate=true";
+        Environment.SetEnvironmentVariable("PG_CONNECTION_STRING", pgConn);
         Environment.SetEnvironmentVariable("REDIS_CONNECTION_STRING", $"localhost:{redisPort}");
+
+        // Override the connection string used by the API under test
+        Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", pgConn);
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -54,18 +60,18 @@ public class IntegrationWebApplicationFactory : WebApplicationFactory<Program>, 
             config.AddEnvironmentVariables();
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["SQL_CONNECTION_STRING"] = Environment.GetEnvironmentVariable("SQL_CONNECTION_STRING") ?? "",
+                ["ConnectionStrings__DefaultConnection"] = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection") ?? "",
                 ["REDIS_CONNECTION_STRING"] = Environment.GetEnvironmentVariable("REDIS_CONNECTION_STRING") ?? ""
             });
         });
 
         builder.ConfigureServices((context, services) =>
         {
-            var sqlConnectionString = context.Configuration.GetConnectionString("DefaultConnection")
-                                      ?? Environment.GetEnvironmentVariable("SQL_CONNECTION_STRING");
+            var pgConnectionString = context.Configuration.GetConnectionString("DefaultConnection")
+                                  ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
 
             services.AddDbContext<NovaShopDbContext>(options =>
-                options.UseSqlServer(sqlConnectionString));
+                options.UseNpgsql(pgConnectionString));
 
             // Inject mock payment gateway; AddNovaShopServices already registers the default
             // but we override for test control
@@ -147,10 +153,10 @@ public class IntegrationWebApplicationFactory : WebApplicationFactory<Program>, 
 
     private async Task DisposeContainersAsync()
     {
-        if (_sqlContainer != null)
+        if (_pgContainer != null)
         {
-            await _sqlContainer.StopAsync();
-            await _sqlContainer.DisposeAsync();
+            await _pgContainer.StopAsync();
+            await _pgContainer.DisposeAsync();
         }
         if (_redisContainer != null)
         {

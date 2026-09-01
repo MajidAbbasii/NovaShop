@@ -120,3 +120,10 @@ $RECYCLE.BIN/
 *.backup
 stackdump
 *.stackdump
+
+######################
+# Hermes Agent artifacts
+######################
+.hermes/
+.migration-backup/
+backend/tools/

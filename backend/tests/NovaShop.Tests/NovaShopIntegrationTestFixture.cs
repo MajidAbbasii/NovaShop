@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Moq;
 using NovaShop.Domain.Services;
 using NovaShop.Infrastructure.Data;
-using Testcontainers.MsSql;
+using Testcontainers.PostgreSql;
 using Testcontainers.Redis;
 using Xunit;
 
@@ -11,35 +11,37 @@ namespace NovaShop.Tests;
 
 public class NovaShopIntegrationTestFixture : IAsyncLifetime
 {
-    private readonly MsSqlContainer _sqlServerContainer;
+    private readonly PostgreSqlContainer _pgContainer;
     private readonly RedisContainer _redisContainer;
-    private string _sqlConnectionString = null!;
+    private string _pgConnectionString = null!;
     private string _redisConnectionString = null!;
 
     public NovaShopIntegrationTestFixture()
     {
-        var sqlBuilder = new MsSqlBuilder()
-            .WithImage("mcr.microsoft.com/mssql/server:2022-latest")
-            .WithEnvironment("ACCEPT_EULA", "Y")
+        var pgBuilder = new PostgreSqlBuilder()
+            .WithImage("postgres:16-alpine")
+            .WithDatabase("NovaShopTest")
+            .WithUsername("novashop")
+            .WithPassword("novashop-test")
             .WithCleanUp(true);
 
         var redisBuilder = new RedisBuilder()
             .WithImage("redis:latest")
             .WithCleanUp(true);
 
-        _sqlServerContainer = sqlBuilder.Build();
+        _pgContainer = pgBuilder.Build();
         _redisContainer = redisBuilder.Build();
 
-        Console.WriteLine("Testcontainers configured for SQL Server and Redis");
+        Console.WriteLine("Testcontainers configured for PostgreSQL and Redis");
     }
 
-    public string GetSqlConnectionString()
+    public string GetPgConnectionString()
     {
-        if (string.IsNullOrEmpty(_sqlConnectionString))
+        if (string.IsNullOrEmpty(_pgConnectionString))
         {
-            _sqlConnectionString = _sqlServerContainer.GetConnectionString();
+            _pgConnectionString = _pgContainer.GetConnectionString();
         }
-        return _sqlConnectionString;
+        return _pgConnectionString;
     }
 
     public string GetRedisConnectionString()
@@ -54,7 +56,7 @@ public class NovaShopIntegrationTestFixture : IAsyncLifetime
     public DbContextOptions<NovaShopDbContext> GetDbContextOptions()
     {
         var optionsBuilder = new DbContextOptionsBuilder<NovaShopDbContext>();
-        optionsBuilder.UseSqlServer(GetSqlConnectionString());
+        optionsBuilder.UseNpgsql(GetPgConnectionString());
         return optionsBuilder.Options;
     }
 
@@ -74,19 +76,19 @@ public class NovaShopIntegrationTestFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         Console.WriteLine("Starting Testcontainers containers...");
-        await _sqlServerContainer.StartAsync();
+        await _pgContainer.StartAsync();
         await _redisContainer.StartAsync();
 
-        Console.WriteLine($"SQL Server container started on port {_sqlServerContainer.GetMappedPublicPort(1433)}");
+        Console.WriteLine($"PostgreSQL container started on port {_pgContainer.GetMappedPublicPort(5432)}");
         Console.WriteLine($"Redis container started on port {_redisContainer.GetMappedPublicPort(6379)}");
     }
 
     public async Task DisposeAsync()
     {
         Console.WriteLine("Stopping Testcontainers containers...");
-        await _sqlServerContainer.StopAsync();
+        await _pgContainer.StopAsync();
         await _redisContainer.StopAsync();
-        await _sqlServerContainer.DisposeAsync();
+        await _pgContainer.DisposeAsync();
         await _redisContainer.DisposeAsync();
     }
 }

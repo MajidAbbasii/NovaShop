@@ -7,8 +7,11 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<NovaShopDb
 {
     public NovaShopDbContext CreateDbContext(string[] args)
     {
+        var connStr = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+            ?? "Host=localhost;Port=5432;Database=NovaShopDb;Username=novashop;Password=novashop-dev;TrustServerCertificate=true";
+
         var optionsBuilder = new DbContextOptionsBuilder<NovaShopDbContext>();
-        optionsBuilder.UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=NovaShopDb;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True");
+        optionsBuilder.UseNpgsql(connStr);
 
         return new NovaShopDbContext(optionsBuilder.Options);
     }

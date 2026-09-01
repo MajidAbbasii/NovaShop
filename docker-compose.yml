@@ -1,6 +1,6 @@
-# NovaShop Production Deployment Docker Compose
+# NovaShop Deployment Docker Compose
 # Architecture:
-#   Frontend (Next.js) → API Gateway (:5100) → NovaShop.Api (:5000) → SQL Server + Redis
+#   Frontend (Next.js) -> API Gateway (:5100) -> NovaShop.Api (:5000) -> PostgreSQL + Redis
 # NOTE: NovaShop is a 2-service backend (ApiGateway + Api monolith), NOT microservices.
 # Do NOT spawn multiple copies of NovaShop.Api — that would duplicate Hangfire
 # recurring jobs and create competing workers.
@@ -17,14 +17,14 @@ services:
     environment:
       - ASPNETCORE_URLS=http://+:5000
       - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=NovaShopDb;User Id=sa;Password=${DB_PASSWORD:-YourStrong!Passw0rd};TrustServerCertificate=True
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=NovaShopDb;Username=novashop;Password=${DB_PASSWORD:-novashop};TrustServerCertificate=true
       - REDIS_CONNECTION_STRING=redis:6379
       - OTEL_SERVICE_NAME=novashop-api
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
     volumes:
       - images_data:/app/wwwroot/images
     depends_on:
-      sqlserver:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -53,8 +53,6 @@ services:
       - ASPNETCORE_URLS=http://+:5100
       - GATEWAY_URL=http://+:5100
       - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=NovaShopDb;User Id=sa;Password=${DB_PASSWORD:-YourStrong!Passw0rd};TrustServerCertificate=True
-      - REDIS_CONNECTION_STRING=redis:6379
       # Override YARP backend cluster address so the gateway proxies to the
       # API container (compose DNS) instead of localhost (which is the gateway itself in Docker).
       - ReverseProxy__Clusters__backend-cluster__Destinations__destination1__Address=http://novashop-api:5000
@@ -76,22 +74,22 @@ services:
       - "monitoring.scrape=true"
       - "monitoring.metrics-endpoint=/metrics"
 
-  # SQL Server Database
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
     environment:
-      - ACCEPT_EULA=Y
-      - SA_PASSWORD=${DB_PASSWORD:-YourStrong!Passw0rd}
-      - MSSQL_PID=Express
+      - POSTGRES_DB=NovaShopDb
+      - POSTGRES_USER=novashop
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-novashop}
     ports:
-      - "1433:1433"
+      - "5432:5432"
     volumes:
-      - sqlserver_data:/var/opt/mssql
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - novashop-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "${DB_PASSWORD:-YourStrong!Passw0rd}", "-C", "-Q", "SELECT 1" ]
+      test: ["CMD-SHELL", "pg_isready -U novashop -d NovaShopDb"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -129,7 +127,7 @@ services:
       - OTEL_SERVICE_NAME=otel-collector
     depends_on:
       - redis
-      - sqlserver
+      - postgres
     restart: unless-stopped
     networks:
       - novashop-net
@@ -176,7 +174,7 @@ services:
     image: prom/alertmanager:latest
     container_name: novashop-alertmanager
     ports:
-      - "9093:9093"
+      - "9100:9100"
     volumes:
       - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager_data:/alertmanager
@@ -259,7 +257,7 @@ services:
       - "monitoring.scrape=cadvisor"
 
 volumes:
-  sqlserver_data:
+  postgres_data:
   redis_data:
   images_data:
   prometheus_data:

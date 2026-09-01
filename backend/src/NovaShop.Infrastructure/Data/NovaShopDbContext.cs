@@ -52,6 +52,15 @@ public class NovaShopDbContext : DbContext
             .IsRowVersion()
             .IsConcurrencyToken();
 
+        // PostgreSQL full-text search vector (STORED generated tsvector column).
+        // Created and maintained by the database via migration SQL:
+        //   ALTER TABLE "Products" ADD COLUMN "SearchVector" tsvector
+        //     GENERATED ALWAYS AS (to_tsvector('simple', coalesce("Name",'') || ' ' || coalesce("Description",''))) STORED;
+        // with a GIN index. EF must not insert or update this column. The
+        // SearchProductsQueryHandler reads it directly via Dapper (raw SQL).
+        modelBuilder.Entity<Product>()
+            .Ignore(p => p.SearchVector);
+
         // ProductImage - Product
         modelBuilder.Entity<ProductImage>()
             .HasOne(pi => pi.Product)

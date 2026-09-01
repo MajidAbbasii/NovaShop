@@ -40,9 +40,9 @@ public static class ProgramHelpers
 
         // Health checks
         var healthChecks = builder.Services.AddHealthChecks()
-            .AddSqlServer(
+            .AddNpgSql(
                 builder.Configuration.GetConnectionString("DefaultConnection"),
-                name: "sql",
+                name: "npgsql",
                 failureStatus: HealthStatus.Unhealthy);
 
         var cacheSettings = builder.Configuration.GetSection("Cache").Get<CacheSettings>() ?? new CacheSettings();
@@ -203,12 +203,9 @@ public static class ProgramHelpers
             "*/5 * * * *", // every 5 minutes
             queue: "critical");
 
-        // Recurring job: rebuild full-text catalog daily at 3am
-        RecurringJob.AddOrUpdate<RebuildFtsCatalogJob>(
-            "rebuild-fts-catalog",
-            job => job.RebuildAsync(CancellationToken.None),
-            "0 3 * * *", // daily at 3am
-            queue: "maintenance");
+        // PostgreSQL full-text search uses a STORED generated tsvector column on
+        // Products (maintained automatically by the database on every INSERT/UPDATE).
+        // No periodic FTS catalog rebuild job is required.
 
         // Recurring job: retry failed SMS notifications every 2 minutes
         RecurringJob.AddOrUpdate<RetryFailedNotificationsJob>(

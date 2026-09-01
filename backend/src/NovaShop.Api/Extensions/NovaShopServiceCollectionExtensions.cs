@@ -1,5 +1,6 @@
 using FluentValidation;
 using Hangfire;
+using Hangfire.PostgreSql;
 using MassTransit;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -138,7 +139,7 @@ public static class NovaShopServiceCollectionExtensions
                 .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
                 .UseSimpleAssemblyNameTypeSerializer()
                 .UseRecommendedSerializerSettings()
-                .UseSqlServerStorage(configuration.GetConnectionString("DefaultConnection"));
+                .UsePostgreSqlStorage(configuration.GetConnectionString("DefaultConnection"));
         });
 
         // Start a server listening on the configured queues (priority order matters:
@@ -232,13 +233,13 @@ public static class NovaShopServiceCollectionExtensions
     private static void ConfigureDbContext(IServiceCollection services, IConfiguration configuration)
     {
         services.AddDbContext<NovaShopDbContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+            options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
         // Register IDbConnection for Dapper-based search
         services.AddScoped<IDbConnection>(sp =>
         {
             var connStr = configuration.GetConnectionString("DefaultConnection");
-            return new Microsoft.Data.SqlClient.SqlConnection(connStr);
+            return new Npgsql.NpgsqlConnection(connStr);
         });
     }
 

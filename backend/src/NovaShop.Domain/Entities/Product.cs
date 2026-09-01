@@ -13,6 +13,12 @@ public class Product
     public decimal? OriginalPrice { get; set; }
     public string ImageUrl { get; set; } = string.Empty;
     public double Rating { get; init; } = 4.0;
+/// <summary>
+/// PostgreSQL full-text search vector (tsvector-compatible).
+/// Populated from Name and Description on product creation/update.
+/// Used by the PostgreSQL FTS implementation.
+/// </summary>
+public string? SearchVector { get; set; }
     public int Stock { get; set; }
     public bool IsAvailable => Stock > 0;
 

@@ -29,7 +29,7 @@ public class Program
         {
             options.RequireHttpsMetadata = false;
             options.Audience = builder.Configuration["Jwt:Audience"];
-            options.Authority = builder.Configuration["Jwt:Issuer"];
+            // Issuer is validated via TokenValidationParameters below (symmetric key).
             var jwtKey = builder.Configuration["Jwt:Key"];
             if (string.IsNullOrWhiteSpace(jwtKey))
                 throw new InvalidOperationException(

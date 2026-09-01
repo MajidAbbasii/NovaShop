@@ -25,10 +25,7 @@ public class SearchProductsQueryHandler : IRequestHandler<SearchProductsQuery, P
         "not", "no", "so", "if", "do", "up", "al", "la", "le", "de", "da"
     };
 
-    public SearchProductsQueryHandler(
-        IDbConnection connection,
-        ICacheService cache,
-        ILogger<SearchProductsQueryHandler> logger)
+    public SearchProductsQueryHandler(IDbConnection connection, ICacheService cache, ILogger<SearchProductsQueryHandler> logger)
     {
         _connection = connection;
         _cache = cache;
@@ -48,13 +45,12 @@ public class SearchProductsQueryHandler : IRequestHandler<SearchProductsQuery, P
         if (await _cache.GetAsync<PagedResult<ProductSearchDto>>(cacheKey) is { } cached)
             return cached;
 
-        var ftsQuery = BuildFtsQuery(raw);
-        var result = await RunSearchQuery(ftsQuery, request.PageNumber, request.PageSize, request.SortBy);
+        var result = await RunSearchQuery(raw, request.PageNumber, request.PageSize, request.SortBy);
 
         // Apply highlights & snippets in C#
         foreach (var item in result.Items)
         {
-            item.Description = BuildSnippet(item.Description, raw, 150);
+            item.Description = TruncateWords(item.Description, 150);
             item.Name = HighlightText(item.Name, raw);
         }
 
@@ -64,47 +60,51 @@ public class SearchProductsQueryHandler : IRequestHandler<SearchProductsQuery, P
         return result;
     }
 
-    private async Task<PagedResult<ProductSearchDto>> RunSearchQuery(
-        string ftsQuery, int pageNumber, int pageSize, string sortBy)
+    private async Task<PagedResult<ProductSearchDto>> RunSearchQuery(string ftsQuery, int pageNumber, int pageSize, string sortBy)
     {
         try
         {
             return await RunFullTextSearch(ftsQuery, pageNumber, pageSize, sortBy);
         }
-        catch (Exception ex) when (ex is Microsoft.Data.SqlClient.SqlException)
+        catch (Exception ex)
         {
-            // Full-text search is unavailable on this server (e.g. LocalDB user instance).
-            // Fall back to a plain LIKE search so the endpoint still returns results.
-            _logger.LogWarning(ex, "Full-text search unavailable; falling back to LIKE search.");
+            // Full-text search unavailable; fall back to a LIKE search so the endpoint still returns results
+            _logger.LogWarning(ex, "Full-text search failed; falling back to LIKE search.");
             return await RunLikeSearch(ftsQuery, pageNumber, pageSize, sortBy);
         }
     }
 
-    private async Task<PagedResult<ProductSearchDto>> RunFullTextSearch(
-        string ftsQuery, int pageNumber, int pageSize, string sortBy)
+    private async Task<PagedResult<ProductSearchDto>> RunFullTextSearch(string ftsQuery, int pageNumber, int pageSize, string sortBy)
     {
         var offset = (pageNumber - 1) * pageSize;
+
+        // PostgreSQL full-text search against the stored generated tsvector column.
+        // 'simple' config matches the column's to_tsvector('simple', ...) generation.
+        // plainto_tsquery safely converts raw user input to a tsquery.
+        // All identifiers are quoted to match the PascalCase schema.
         var sql = $@"
-;WITH Ranked AS (
+WITH Ranked AS (
     SELECT
-        p.Id, p.Name, p.Description, p.Price, p.OriginalPrice,
-        p.ImageUrl, p.Rating, p.Stock,
-        CASE WHEN p.Stock > 0 THEN 1 ELSE 0 END AS IsAvailable, ft.RANK
-    FROM Products p
-    INNER JOIN CONTAINSTABLE(Products, (Name, Description),
-        @ftsQuery, 1000) ft ON p.Id = ft.[KEY]
+        p.""Id"", p.""Name"", p.""Description"", p.""Price"", p.""OriginalPrice"",
+        p.""ImageUrl"", p.""Rating"", p.""Stock"",
+        CASE WHEN p.""Stock"" > 0 THEN 1 ELSE 0 END AS ""IsAvailable"",
+        ts_rank_cd(p.""SearchVector"", plainto_tsquery('simple', @ftsQuery)) AS rank
+    FROM ""Products"" p
+    WHERE p.""SearchVector"" IS NOT NULL
+      AND plainto_tsquery('simple', @ftsQuery) @@ p.""SearchVector""
 )
 SELECT
-    Id, Name, Description, Price, OriginalPrice, ImageUrl,
-    Rating, Stock, IsAvailable, RANK AS [Rank]
+    ""Id"", ""Name"", ""Description"", ""Price"", ""OriginalPrice"", ""ImageUrl"",
+    ""Rating"", ""Stock"", ""IsAvailable"", rank AS ""Rank""
 FROM Ranked
-{BuildSortClause(sortBy, "Rank")}
+{BuildSortClause(sortBy)}
 OFFSET {offset} ROWS FETCH NEXT {pageSize} ROWS ONLY;
 
-SELECT COUNT(*) FROM Products p
-INNER JOIN CONTAINSTABLE(Products, (Name, Description),
-    @ftsQuery, 1000) ft ON p.Id = ft.[KEY];
-";
+SELECT COUNT(*)
+FROM ""Products""
+WHERE ""SearchVector"" IS NOT NULL
+  AND plainto_tsquery('simple', @ftsQuery) @@ ""SearchVector"";";
+
         var multi = await _connection.QueryMultipleAsync(sql, new { ftsQuery });
         var items = (await multi.ReadAsync<ProductSearchDto>()).ToList();
         var totalCount = await multi.ReadSingleAsync<int>();
@@ -112,111 +112,80 @@ INNER JOIN CONTAINSTABLE(Products, (Name, Description),
         return new PagedResult<ProductSearchDto>(items, totalCount, pageNumber, pageSize, totalPages);
     }
 
-    private async Task<PagedResult<ProductSearchDto>> RunLikeSearch(
-        string ftsQuery, int pageNumber, int pageSize, string sortBy)
+    private async Task<PagedResult<ProductSearchDto>> RunLikeSearch(string ftsQuery, int pageNumber, int pageSize, string sortBy)
     {
         var offset = (pageNumber - 1) * pageSize;
 
-        // Extract plain terms from the FTS ISABOUT query for LIKE matching.
-        var tokens = Regex.Matches(ftsQuery, "\"([^\"]+)\"")
+        var tokens = Regex.Matches(ftsQuery, @"([^\s]+)")
             .Cast<Match>()
             .Select(m => m.Groups[1].Value)
             .Where(t => !string.IsNullOrWhiteSpace(t))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+
         if (tokens.Count == 0) return new PagedResult<ProductSearchDto>([], 0, pageNumber, pageSize, 0);
 
         var conditions = new List<string>();
         var parameters = new DynamicParameters();
         for (var i = 0; i < tokens.Count; i++)
         {
-            var p = $"@q{i}";
-            parameters.Add(p, $"%{tokens[i]}%");
-            conditions.Add($"(p.Name LIKE {p} OR p.Description LIKE {p})");
+            var paramName = "@q" + i;
+            parameters.Add(paramName, "%" + tokens[i] + "%");
+            conditions.Add("(p.\"Name\" ILIKE " + paramName + " OR p.\"Description\" ILIKE " + paramName + ")");
         }
         var where = string.Join(" OR ", conditions);
 
-        var sql = $@"
-
-;WITH Matched AS (
+        var likeSql = @"
+WITH Matched AS (
     SELECT
-        p.Id, p.Name, p.Description, p.Price, p.OriginalPrice,
-        p.ImageUrl, p.Rating, p.Stock,
-        CASE WHEN p.Stock > 0 THEN 1 ELSE 0 END AS IsAvailable
-    FROM Products p
-    WHERE {where}
+        p.""Id"", p.""Name"", p.""Description"", p.""Price"", p.""OriginalPrice"",
+        p.""ImageUrl"", p.""Rating"", p.""Stock"",
+        CASE WHEN p.""Stock"" > 0 THEN 1 ELSE 0 END AS ""IsAvailable""
+    FROM ""Products"" p
+    WHERE " + where + @"
 )
 SELECT
-    Id, Name, Description, Price, OriginalPrice, ImageUrl,
-    Rating, Stock, IsAvailable, 1 AS [Rank]
+    ""Id"", ""Name"", ""Description"", ""Price"", ""OriginalPrice"", ""ImageUrl"",
+    ""Rating"", ""Stock"", ""IsAvailable"", 1 AS ""Rank""
 FROM Matched
-{BuildSortClause(sortBy)}
-OFFSET {offset} ROWS FETCH NEXT {pageSize} ROWS ONLY;
+" + BuildSortClause(sortBy) + @"
+OFFSET " + offset + " ROWS FETCH NEXT " + pageSize + @" ROWS ONLY;
 
-SELECT COUNT(*) FROM Products p
-WHERE {where};
-";
-        var multi = await _connection.QueryMultipleAsync(sql, parameters);
+SELECT COUNT(*) FROM ""Products"" WHERE " + where + ";";
+
+        var multi = await _connection.QueryMultipleAsync(likeSql, parameters);
         var items = (await multi.ReadAsync<ProductSearchDto>()).ToList();
         var totalCount = await multi.ReadSingleAsync<int>();
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
         return new PagedResult<ProductSearchDto>(items, totalCount, pageNumber, pageSize, totalPages);
     }
 
-    private static string BuildSortClause(string sortBy, string rankColumn = "Rank")
+    private static string BuildSortClause(string sortBy)
     {
         return sortBy switch
         {
-            "price_asc" => "ORDER BY Price ASC",
-            "price_desc" => "ORDER BY Price DESC",
-            "name" => "ORDER BY Name",
-            _ => $"ORDER BY {rankColumn} DESC"
+            "price_asc" => "ORDER BY \"Price\" ASC",
+            "price_desc" => "ORDER BY \"Price\" DESC",
+            "name" => "ORDER BY \"Name\"",
+            _ => "ORDER BY \"Rank\" DESC"
         };
     }
 
-    /// <summary>Build ISABOUT weighted FTS query for CONTAINSTABLE.</summary>
     internal static string BuildFtsQuery(string raw)
     {
         var cleaned = Regex.Replace(raw, @"[^\w\s]", " ");
         var tokens = cleaned
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Where(t => t.Length > 1 && !StopWords.Contains(t))
-            .Select(t => $"FORMSOF(THESAURUS, {t}) OR \"{t}\"")
+            .Select(t => "[" + t + "]")
             .ToList();
 
         if (tokens.Count == 0)
-            return $"\"{Regex.Replace(raw, @"[^\w\s]", "").Trim()}\"";
+            return "[" + Regex.Replace(raw, @"[^\w\s]", "").Trim() + "]";
 
-        // ISABOUT with column weighting: Name 0.8, Description 0.2
-        var nameTerms = string.Join(" WEIGHT(0.8), ", tokens.Select(t => $"Name:{t}"));
-        var descTerms = string.Join(" WEIGHT(0.2), ", tokens.Select(t => $"Description:{t}"));
-        return $"ISABOUT({nameTerms} WEIGHT(0.8), {descTerms} WEIGHT(0.2))";
+        return string.Join(" OR ", tokens);
     }
 
-    /// <summary>Extract a snippet around first match.</summary>
-    internal static string? BuildSnippet(string? text, string query, int maxLen)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return null;
-
-        var idx = text.IndexOf(query, StringComparison.OrdinalIgnoreCase);
-        if (idx < 0)
-        {
-            var first = query.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? query;
-            idx = text.IndexOf(first, StringComparison.OrdinalIgnoreCase);
-            if (idx < 0) return TruncateWords(text, maxLen);
-        }
-
-        var start = Math.Max(0, idx - maxLen / 2);
-        var end = Math.Min(text.Length, idx + query.Length + maxLen / 2);
-        var snippet = text[start..end];
-
-        if (start > 0) snippet = "..." + snippet;
-        if (end < text.Length) snippet += "...";
-
-        return HighlightText(snippet, query);
-    }
-
-    /// <summary>Wrap matching terms in &lt;mark&gt; tags.</summary>
     internal static string HighlightText(string text, string query)
     {
         if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(query))
@@ -226,7 +195,7 @@ WHERE {where};
             query.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(Regex.Escape));
         if (string.IsNullOrEmpty(pattern)) return text;
 
-        return Regex.Replace(text, $"({pattern})", "<mark>$1</mark>",
+        return Regex.Replace(text, "(" + pattern + ")", "<mark>$1</mark>",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 

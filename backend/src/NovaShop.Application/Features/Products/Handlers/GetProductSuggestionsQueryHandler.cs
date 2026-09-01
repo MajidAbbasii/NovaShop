@@ -1,5 +1,4 @@
 using System.Data;
-using System.Text.RegularExpressions;
 using Dapper;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -33,23 +32,27 @@ public class GetProductSuggestionsQueryHandler
         if (string.IsNullOrWhiteSpace(raw) || raw.Length < 2)
             return [];
 
-        var ftsQuery = $"\"{Regex.Replace(raw, @"[^\w\s]", "")}*\"";
+        // PostgreSQL full-text search: use the generated SearchVector column
+        // with a GIN index. plainto_tsquery safely converts raw input to a tsquery.
+        // 'simple' config matches the column's to_tsvector('simple', ...) generation.
         var sql = @"
-SELECT TOP (@Max) p.Id, p.Name, p.Price, p.ImageUrl
-FROM Products p
-INNER JOIN CONTAINSTABLE(Products, Name, @ftsQuery, @Max) ft
-    ON p.Id = ft.[KEY]
-ORDER BY ft.RANK DESC;
+SELECT p.""Id"", p.""Name"", p.""Price"", p.""ImageUrl""
+FROM ""Products"" p
+WHERE p.""SearchVector"" IS NOT NULL
+  AND plainto_tsquery('simple', @ftsQuery) @@ p.""SearchVector""
+ORDER BY ts_rank_cd(p.""SearchVector"", plainto_tsquery('simple', @ftsQuery)) DESC
+LIMIT @Max;
 ";
+
         try
         {
             var items = await _connection.QueryAsync<ProductSuggestion>(
-                sql, new { ftsQuery, Max = request.MaxResults });
+                sql, new { ftsQuery = raw, Max = request.MaxResults });
             return items.AsList();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Suggestions query failed: {Query}", ftsQuery);
+            _logger.LogError(ex, "Suggestions query failed: {Query}", raw);
             return [];
         }
     }
