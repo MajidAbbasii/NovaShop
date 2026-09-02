@@ -116,6 +116,36 @@ export default function CustomDollRequestDetailPage() {
                   </div>
                 )}
 
+                {req.bodyColor && (
+                  <div className="rounded-xl bg-muted/50 p-4">
+                    <p className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+                      <Camera className="size-4 text-primary" />
+                      {t("customDoll.bodyColor")}
+                    </p>
+                    <p className="text-sm leading-relaxed text-muted-foreground">{req.bodyColor}</p>
+                  </div>
+                )}
+
+                {req.eyeColor && (
+                  <div className="rounded-xl bg-muted/50 p-4">
+                    <p className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+                      <Camera className="size-4 text-primary" />
+                      {t("customDoll.eyeColor")}
+                    </p>
+                    <p className="text-sm leading-relaxed text-muted-foreground">{req.eyeColor}</p>
+                  </div>
+                )}
+
+                {req.height > 0 && (
+                  <div className="rounded-xl bg-muted/50 p-4">
+                    <p className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+                      <Camera className="size-4 text-primary" />
+                      {t("customDoll.height")}
+                    </p>
+                    <p className="text-sm leading-relaxed text-muted-foreground">{req.height} سانتی‌متر</p>
+                  </div>
+                )}
+
                 {req.status === "Approved" && req.price != null && (
                   <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-center">
                     <p className="mb-1 flex items-center justify-center gap-1.5 text-sm font-semibold text-green-800">

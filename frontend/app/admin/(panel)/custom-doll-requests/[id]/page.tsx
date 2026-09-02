@@ -172,6 +172,24 @@ export default function AdminCustomDollRequestDetailPage() {
                   <p className="text-sm leading-relaxed">{req.description}</p>
                 </div>
               )}
+              {req.bodyColor && (
+                <div className="rounded-xl bg-muted/50 p-3">
+                  <p className="mb-1 text-xs font-semibold text-muted-foreground">{t("customDoll.bodyColor")}</p>
+                  <p className="text-sm leading-relaxed">{req.bodyColor}</p>
+                </div>
+              )}
+              {req.eyeColor && (
+                <div className="rounded-xl bg-muted/50 p-3">
+                  <p className="mb-1 text-xs font-semibold text-muted-foreground">{t("customDoll.eyeColor")}</p>
+                  <p className="text-sm leading-relaxed">{req.eyeColor}</p>
+                </div>
+              )}
+              {req.height > 0 && (
+                <div className="rounded-xl bg-muted/50 p-3">
+                  <p className="mb-1 text-xs font-semibold text-muted-foreground">{t("customDoll.height")}</p>
+                  <p className="text-sm leading-relaxed">{req.height} سانتی‌متر</p>
+                </div>
+              )}
               {req.price != null && (
                 <p className="rounded-xl border border-green-200 bg-green-50 p-3 text-center font-bold text-green-700">
                   {formatCurrency(req.price, locale)}

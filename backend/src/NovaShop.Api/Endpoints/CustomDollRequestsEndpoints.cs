@@ -22,11 +22,27 @@ public static class CustomDollRequestsEndpoints
             if (string.IsNullOrWhiteSpace(req.ImageUrl))
                 return Results.BadRequest(new { message = "تصویر الزامی است" });
 
+            if (string.IsNullOrWhiteSpace(req.Title))
+                return Results.BadRequest(new { message = "عنوان الزامی است" });
+
+            if (string.IsNullOrWhiteSpace(req.BodyColor))
+                return Results.BadRequest(new { message = "رنگ بدنه الزامی است" });
+
+            if (string.IsNullOrWhiteSpace(req.EyeColor))
+                return Results.BadRequest(new { message = "رنگ چشم الزامی است" });
+
+            if (req.Height <= 0)
+                return Results.BadRequest(new { message = "ارتفاع باید بزرگتر از صفر باشد" });
+
             var request = new CustomDollRequest
             {
                 UserId = userId.Value,
+                Title = req.Title.Trim(),
                 ImageUrl = req.ImageUrl.Trim(),
                 Description = (req.Description ?? string.Empty).Trim(),
+                BodyColor = req.BodyColor.Trim(),
+                EyeColor = req.EyeColor.Trim(),
+                Height = req.Height,
                 Status = CustomDollRequest.StatusPendingReview,
                 Currency = CustomDollRequest.CurrencyToman
             };
@@ -170,7 +186,11 @@ public static class CustomDollRequestsEndpoints
                     CustomerUsername = r.User.Username,
                     CustomerPhone = r.User.PhoneNumber,
                     ImageUrl = r.ImageUrl,
+                    Title = r.Title,
                     Description = r.Description,
+                    BodyColor = r.BodyColor,
+                    EyeColor = r.EyeColor,
+                    Height = r.Height,
                     Status = r.Status,
                     Price = r.Price,
                     Currency = r.Currency,
@@ -308,8 +328,12 @@ public static class CustomDollRequestsEndpoints
     private static CustomDollRequestDto ToDto(CustomDollRequest r) => new()
     {
         Id = r.Id,
+        Title = r.Title,
         ImageUrl = r.ImageUrl,
         Description = r.Description,
+        BodyColor = r.BodyColor,
+        EyeColor = r.EyeColor,
+        Height = r.Height,
         Status = r.Status,
         Price = r.Price,
         Currency = r.Currency,
@@ -323,8 +347,12 @@ public static class CustomDollRequestsEndpoints
 public class CustomDollRequestDto
 {
     public int Id { get; set; }
+    public string Title { get; set; } = string.Empty;
     public string ImageUrl { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public string BodyColor { get; set; } = string.Empty;
+    public string EyeColor { get; set; } = string.Empty;
+    public int Height { get; set; }
     public string Status { get; set; } = string.Empty;
     public decimal? Price { get; set; }
     public string Currency { get; set; } = string.Empty;
@@ -341,8 +369,12 @@ public class AdminCustomDollRequestDto
     public string CustomerUsername { get; set; } = string.Empty;
     public string CustomerPhone { get; set; } = string.Empty;
     public string? CustomerEmail { get; set; }
+    public string Title { get; set; } = string.Empty;
     public string ImageUrl { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public string BodyColor { get; set; } = string.Empty;
+    public string EyeColor { get; set; } = string.Empty;
+    public int Height { get; set; }
     public string Status { get; set; } = string.Empty;
     public decimal? Price { get; set; }
     public string Currency { get; set; } = string.Empty;
@@ -353,6 +385,6 @@ public class AdminCustomDollRequestDto
     public DateTime? ReviewedAt { get; set; }
 }
 
-public record CreateCustomDollRequestRequest(string ImageUrl, string? Description);
+public record CreateCustomDollRequestRequest(string ImageUrl, string Title, string BodyColor, string EyeColor, int Height, string? Description);
 public record ApproveCustomDollRequestRequest(decimal? Price, string? AdminMessage);
 public record RejectCustomDollRequestRequest(string? AdminMessage);

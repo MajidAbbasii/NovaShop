@@ -313,8 +313,12 @@ public class NovaShopDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
             r.Property(x => x.Status).HasMaxLength(20);
             r.Property(x => x.Currency).HasMaxLength(20);
+            r.Property(x => x.Title).IsRequired().HasMaxLength(200);
             r.Property(x => x.ImageUrl).HasMaxLength(500);
             r.Property(x => x.Description).HasMaxLength(2000);
+            r.Property(x => x.BodyColor).IsRequired().HasMaxLength(100);
+            r.Property(x => x.EyeColor).IsRequired().HasMaxLength(100);
+            r.Property(x => x.Height).IsRequired();
             r.Property(x => x.AdminMessage).HasMaxLength(2000);
             r.Property(x => x.Price).HasColumnType("decimal(18,2)");
             r.HasIndex(x => x.UserId);

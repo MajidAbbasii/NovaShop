@@ -5,8 +5,12 @@ export type CustomDollStatus = "PendingReview" | "Approved" | "Rejected" | "Cust
 
 export interface CustomDollRequest {
   id: number;
+  title: string;
   imageUrl: string;
   description: string;
+  bodyColor: string;
+  eyeColor: string;
+  height: number;
   status: CustomDollStatus;
   price: number | null;
   currency: string;
@@ -26,12 +30,16 @@ export interface AdminCustomDollRequest extends CustomDollRequest {
 
 export async function createCustomDollRequest(
   imageUrl: string,
-  description: string
+  title: string,
+  description: string,
+  bodyColor: string,
+  eyeColor: string,
+  height: number
 ): Promise<number> {
   const res = await fetch(`${API_GATEWAY_URL}/api/custom-doll-requests`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({ imageUrl, description }),
+    body: JSON.stringify({ imageUrl, title, description, bodyColor, eyeColor, height }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => null);

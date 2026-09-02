@@ -22,7 +22,11 @@ export default function NewCustomDollRequestPage() {
   const searchParams = useSearchParams();
   const { t, dir } = useLocale();
   const [imageUrl, setImageUrl] = useState<string>("");
+  const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [bodyColor, setBodyColor] = useState("");
+  const [eyeColor, setEyeColor] = useState("");
+  const [height, setHeight] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [authed, setAuthed] = useState(false);
 
@@ -48,9 +52,32 @@ export default function NewCustomDollRequestPage() {
       toast({ title: t("customDoll.imageRequired"), variant: "destructive" });
       return;
     }
+    if (!title.trim()) {
+      toast({ title: t("customDoll.titleRequired"), variant: "destructive" });
+      return;
+    }
+    if (!bodyColor) {
+      toast({ title: t("customDoll.bodyColorRequired"), variant: "destructive" });
+      return;
+    }
+    if (!eyeColor) {
+      toast({ title: t("customDoll.eyeColorRequired"), variant: "destructive" });
+      return;
+    }
+    if (!height || parseInt(height) <= 0) {
+      toast({ title: t("customDoll.heightRequired"), variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
-      const id = await createCustomDollRequest(imageUrl, description.trim());
+      const id = await createCustomDollRequest(
+        imageUrl,
+        title.trim(),
+        description.trim(),
+        bodyColor,
+        eyeColor,
+        parseInt(height)
+      );
       toast({ title: t("customDoll.created") });
       router.push(`/custom-doll-requests/${id}`);
     } catch (e) {
@@ -114,8 +141,56 @@ export default function NewCustomDollRequestPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>{t("customDoll.description")}</Label>
+              <Label htmlFor="title">{t("customDoll.title")}</Label>
+              <Input
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={t("customDoll.titlePlaceholder")}
+                maxLength={200}
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="bodyColor">{t("customDoll.bodyColor")}</Label>
+                <Input
+                  id="bodyColor"
+                  value={bodyColor}
+                  onChange={(e) => setBodyColor(e.target.value)}
+                  placeholder={t("customDoll.bodyColorPlaceholder")}
+                  maxLength={100}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="eyeColor">{t("customDoll.eyeColor")}</Label>
+                <Input
+                  id="eyeColor"
+                  value={eyeColor}
+                  onChange={(e) => setEyeColor(e.target.value)}
+                  placeholder={t("customDoll.eyeColorPlaceholder")}
+                  maxLength={100}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="height">{t("customDoll.height")}</Label>
+              <Input
+                id="height"
+                type="number"
+                min={1}
+                value={height}
+                onChange={(e) => setHeight(e.target.value)}
+                placeholder={t("customDoll.heightPlaceholder")}
+              />
+              <p className="text-xs text-muted-foreground">{t("customDoll.heightHint")}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">{t("customDoll.description")}</Label>
               <Textarea
+                id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder={t("customDoll.descriptionPlaceholder")}

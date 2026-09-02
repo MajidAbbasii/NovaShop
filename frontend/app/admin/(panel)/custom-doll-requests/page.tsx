@@ -86,6 +86,7 @@ export default function AdminCustomDollRequestsPage() {
               <tr>
                 <th className="p-3 text-start">{t("admin.customDoll.customer")}</th>
                 <th className="p-3 text-start">{t("customDoll.image")}</th>
+                <th className="p-3 text-start">{t("customDoll.title")}</th>
                 <th className="p-3 text-start">{t("customDoll.requestDate")}</th>
                 <th className="p-3 text-start">{t("customDoll.status")}</th>
                 <th className="p-3 text-start">{t("customDoll.price")}</th>
@@ -104,6 +105,9 @@ export default function AdminCustomDollRequestsPage() {
                   </td>
                   <td className="p-3">
                     <img src={resolveImageUrl(r.imageUrl)} alt="" className="size-12 rounded-lg border object-cover" />
+                  </td>
+                  <td className="p-3">
+                    <p className="font-medium">{r.title || "—"}</p>
                   </td>
                   <td className="p-3 text-muted-foreground">
                     {new Intl.DateTimeFormat(locale, { year: "numeric", month: "short", day: "numeric" }).format(

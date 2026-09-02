@@ -15,8 +15,12 @@ public class CustomDollRequest
     public int Id { get; set; }
     public int UserId { get; set; }
     public User User { get; init; } = null!;
+    public string Title { get; set; } = string.Empty;
     public string ImageUrl { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public string BodyColor { get; set; } = string.Empty;
+    public string EyeColor { get; set; } = string.Empty;
+    public int Height { get; set; }
     public string Status { get; set; } = StatusPendingReview;
     public decimal? Price { get; set; }
     public string Currency { get; set; } = CurrencyToman;

@@ -64,9 +64,19 @@ public static class ProductsEndpoints
         // Full-text search
         app.MapGet("/api/products/search", async (
             IMediator mediator,
-            [AsParameters] SearchProductsQuery query) =>
+            string query = "",
+            int pageNumber = 1,
+            int pageSize = 20,
+            string sortBy = "relevance") =>
         {
-            var result = await mediator.Send(query);
+            var q = new SearchProductsQuery
+            {
+                Query = query,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                SortBy = sortBy
+            };
+            var result = await mediator.Send(q);
             return Results.Ok(result);
         })
         .WithName("SearchProducts")
