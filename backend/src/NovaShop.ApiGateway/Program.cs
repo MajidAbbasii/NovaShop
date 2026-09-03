@@ -52,7 +52,16 @@ public class Program
         if (args != null && args.Length > 0)
             builder.Configuration.AddCommandLine(args);
 
-        // Configure reverse proxy from configuration
+        // Configure reverse proxy from configuration.
+        // The backend cluster destination is local Docker DNS ("novashop-api:5000")
+        // by default for local compose. On Render this is overridden at runtime
+        // via the API_BASE_URL environment variable (see below).
+        var apiBaseUrl = Environment.GetEnvironmentVariable("API_BASE_URL");
+        if (!string.IsNullOrEmpty(apiBaseUrl))
+        {
+            // Override the destination address via config so YARP picks it up.
+            builder.Configuration["ReverseProxy:Clusters:backend-cluster:Destinations:destination1:Address"] = apiBaseUrl;
+        }
         builder.Services.AddReverseProxy()
             .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
@@ -146,8 +155,6 @@ public class Program
         // Logging
         builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting", LogLevel.Warning);
 
-        builder.WebHost.UseUrls(Environment.GetEnvironmentVariable("GATEWAY_URL") ?? "http://localhost:5100");
-
         // Reverse-proxy (Render) forwarded-header handling. The gateway is only reachable
         // through the proxy edge, so trust forwarded headers from the known proxy hop
         // (loopback + private/CGNAT ranges) to derive the original https scheme/host.
@@ -198,7 +205,7 @@ public class Program
         app.MapReverseProxy();
 
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
-        logger.LogInformation("NovaShop API Gateway starting on http://localhost:5100");
+        logger.LogInformation("NovaShop API Gateway starting");
 
         await app.RunAsync();
     }

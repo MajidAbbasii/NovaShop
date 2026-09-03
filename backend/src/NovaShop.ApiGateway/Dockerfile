@@ -20,9 +20,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/publish .
 
-ENV ASPNETCORE_URLS=http://+:5100
+# Copy entrypoint script and make it executable.
+# The entrypoint.sh script sets ASPNETCORE_URLS=http://0.0.0.0:$PORT at runtime
+# (Docker ENV cannot expand shell variables, so we use the shell entrypoint).
+COPY backend/src/NovaShop.ApiGateway/docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
 ENV DOTNET_SYSTEM_GLOBALIZATION_APARTMENT=1
 
+# EXPOSE documents the default port; Render overrides with $PORT at runtime.
 EXPOSE 5100
 
-ENTRYPOINT ["dotnet", "NovaShop.ApiGateway.dll"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
