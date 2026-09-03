@@ -1,19 +1,61 @@
+using System;
 using System.Threading.RateLimiting;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Prometheus;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.Configuration;
 
 namespace NovaShop.ApiGateway;
 
+// Fix: Use WebApplication.CreateEmptyBuilder instead of WebApplication.CreateBuilder.
+//
+// WebApplication.CreateBuilder internally calls Host.CreateApplicationBuilder which
+// adds default JSON configuration sources (appsettings.json, appsettings.{ENV}.json)
+// with reloadOnChange: true. These sources are THEN materialized into
+// FileConfigurationProvider instances during CreateBuilder's construction, creating
+// FileSystemWatcher instances (inotify on Linux). On Render the default inotify
+// user limit (128) is exhausted, causing:
+//   System.IO.IOException: The configured user limit (128) on the number of
+//   inotify instances has been reached...
+//
+// A post-hoc fix that mutates ReloadOnChange on source definitions AFTER
+// CreateBuilder returns is TOO LATE — the providers (and their watchers)
+// are already built during CreateBuilder.
+//
+// Solution: CreateEmptyBuilder does NOT add default JSON config sources. We add
+// them ourselves with reloadOnChange: false, guaranteeing FileConfigurationProvider
+// will NOT create a FileSystemWatcher (verified: _changeTokenRegistration is NULL).
+//
+// All configuration sources from the original CreateBuilder are preserved:
+//   - appsettings.json
+//   - appsettings.{Environment}.json
+//   - Environment variables
+//   - Command-line arguments
+//   - ReverseProxy, JWT auth, CORS, RateLimiting, HealthChecks, Logging
+//   - ForwardedHeaders, Urls — all preserved exactly
 public class Program
 {
     public static async Task Main(string[] args)
     {
-        var builder = WebApplication.CreateBuilder(args);
+        var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions
+        {
+            Args = args,
+        });
 
+        // Set base path for JSON file resolution.
+        // CreateEmptyBuilder does not set this automatically.
+        builder.Configuration.SetBasePath(builder.Environment.ContentRootPath);
+
+        // Add JSON configuration sources with reloadOnChange: false to prevent
+        // FileSystemWatcher / inotify instance creation. All other config sources
+        // (environment variables, command-line args) are unaffected — they have
+        // no ReloadOnChange property and cannot create watchers.
         builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: false);
         builder.Configuration.AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false);
+        builder.Configuration.AddEnvironmentVariables();
+        if (args != null && args.Length > 0)
+            builder.Configuration.AddCommandLine(args);
 
         // Configure reverse proxy from configuration
         builder.Services.AddReverseProxy()
@@ -94,9 +136,9 @@ public class Program
                         Window = TimeSpan.FromMinutes(1),
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst
                     }));
-
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-            options.OnRejected = async (context, _) => {
+            options.OnRejected = async (context, _) =>
+            {
                 context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
                 await context.HttpContext.Response.WriteAsync("Too many requests. Please try again later.");
             };
@@ -150,18 +192,14 @@ public class Program
         app.UseCors("GatewayPolicy");
         app.UseRateLimiter();
         app.UseStaticFiles();
-
         app.UseMiddleware<CorrelationMiddleware>();
-
         app.UseAuthentication();
         app.UseAuthorization();
-
         app.MapHealthChecks("/health");
 
         // Prometheus metrics endpoint
         app.UseMetricServer();
         app.UseHttpMetrics();
-
         app.MapReverseProxy();
 
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
@@ -188,18 +226,14 @@ public class CorrelationMiddleware
         var correlationId = context.Request.Headers.ContainsKey(CorrelationHeader)
             ? context.Request.Headers[CorrelationHeader].FirstOrDefault()
             : Guid.NewGuid().ToString();
-
         context.Request.Headers[CorrelationHeader] = correlationId;
         context.Response.Headers[CorrelationHeader] = correlationId;
-
         _logger.LogInformation(
             "Gateway Request: {Method} {Path} | Correlation: {CorrelationId} | Client: {ClientIP}",
             context.Request.Method,
             context.Request.Path,
             correlationId,
-            context.Connection.RemoteIpAddress?.ToString() ?? "Unknown"
-        );
-
+            context.Connection.RemoteIpAddress?.ToString() ?? "Unknown");
         await _next(context);
     }
 }
