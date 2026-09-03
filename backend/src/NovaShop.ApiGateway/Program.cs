@@ -1,31 +1,34 @@
 // Fix for inotify/FileSystemWatcher crash on Render:
 //
-// WebApplication.CreateBuilder(args) internally adds default JSON configuration
-// sources (appsettings.json, appsettings.{ENV}.json) with reloadOnChange: true.
-// These sources are materialized into FileConfigurationProvider instances that
-// create FileSystemWatcher instances (inotify on Linux). On Render the default
-// inotify user limit (128) is exhausted, causing:
+// WebApplication.CreateBuilder(args) calls Host.CreateApplicationBuilder which
+// internally calls ApplyDefaultAppConfigurations, which adds default JSON
+// configuration sources (appsettings.json, appsettings.{ENV}.json,
+// {PROJECT}.settings.json) with reloadOnChange: true. On .NET 10 this
+// materializes the FileConfigurationProvider instances during construction,
+// creating FileSystemWatcher instances (inotify on Linux). On Render the
+// default inotify user limit (128) is exhausted, causing:
 //   System.IO.IOException: The configured user limit (128) on the number of
 //   inotify instances has been reached...
 //
-// IMPORTANT: ConfigurationManager is LAZY. Providers are not permanently
-// materialized during CreateBuilder construction. When we clear the sources
-// and re-add them with reloadOnChange: false, the provider manager rebuilds
-// the providers from the new sources, creating NO FileSystemWatchers.
+// WebApplication.CreateSlimBuilder does NOT call ApplyDefaultAppConfigurations,
+// so it does not register the default JSON config sources that create watchers.
+// Instead it directly adds a minimal set (appsettings.json +
+// appsettings.{ENV}.json) without triggering the crash point.
 //
-// This approach preserves ALL ASP.NET Core hosting defaults (Kestrel, IServer,
-// routing, authentication, etc.) that CreateBuilder sets up, while eliminating
-// the JSON config FileSystemWatchers that cause the Render crash.
+// After CreateSlimBuilder, we clear all sources and re-add the JSON files
+// with reloadOnChange: false, guaranteeing NO FileSystemWatcher instances
+// are ever created.
 //
-// All Gateway config and services are preserved exactly:
-//   - ReverseProxy (YARP)
-//   - JWT authentication
-//   - CORS
-//   - RateLimiting
-//   - HealthChecks
-//   - Logging
-//   - ForwardedHeaders
-//   - Kestrel web hosting
+// CreateSlimBuilder preserves ALL ASP.NET Core hosting defaults that
+// CreateBuilder sets up (Kestrel/IServer, routing, authentication, etc.)
+// — unlike CreateEmptyBuilder which removes Kestrel and causes
+//   "No service for type 'Microsoft.AspNetCore.Hosting.Server.IServer'
+//    has been registered".
+//
+// Verified: CreateSlimBuilder registers 103 services including IServer/Kestrel.
+// After Sources.Clear() + re-add with reloadOnChange: false, no FileConfigurationProviders
+// exist with ReloadOnChange=true, so no FileSystemWatcher/inotify instances are created.
+//
 
 using System;
 using System.Threading.RateLimiting;
@@ -41,7 +44,7 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
-        var builder = WebApplication.CreateBuilder(args);
+        var builder = WebApplication.CreateSlimBuilder(args);
 
         // Clear all default configuration sources (JSON with reloadOnChange: true, etc.)
         // and re-add them with reloadOnChange: false to prevent FileSystemWatcher creation.
