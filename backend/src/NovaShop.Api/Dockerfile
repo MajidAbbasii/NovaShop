@@ -13,7 +13,9 @@ RUN dotnet restore "backend/src/NovaShop.Api/NovaShop.Api.csproj"
 # copy everything else and publish
 COPY . .
 WORKDIR /src/backend/src/NovaShop.Api
-RUN dotnet publish "NovaShop.Api.csproj" -c Release -o /app/publish
+RUN dotnet publish "NovaShop.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+ENV ASPNETCORE_URLS=http://0.0.0.0:$PORT
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
