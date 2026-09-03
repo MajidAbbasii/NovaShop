@@ -15,8 +15,6 @@ COPY . .
 WORKDIR /src/backend/src/NovaShop.Api
 RUN dotnet publish "NovaShop.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-ENV ASPNETCORE_URLS=http://0.0.0.0:$PORT
-
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 # Install curl so the container healthcheck (curl -f http://localhost:5000/health) can run.
@@ -24,7 +22,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/publish .
 
-# Copy entrypoint script and make it executable
+# Copy entrypoint script and make it executable.
+# The entrypoint.sh script sets ASPNETCORE_URLS=http://0.0.0.0:$PORT at runtime
+# (Docker ENV cannot expand shell variables, so we use the shell entrypoint).
 COPY backend/src/NovaShop.Api/docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
