@@ -11,7 +11,7 @@
 NovaShop is a handmade-knitted-doll e-commerce platform built as a **3-tier .NET 9 / Next.js 14 (App Router)** application:
 
 - **Frontend**: Next.js 14 (React, TypeScript, Tailwind, shadcn/ui) on `http://localhost:3000`.
-- **API Gateway**: ASP.NET Core + YARP reverse proxy on `http://localhost:5100` (JWT auth, per-client rate limiting, CORS).
+- **API Gateway**: ASP.NET Core + YARP reverse proxy on `http://localhost:5250` (JWT auth, per-client rate limiting, CORS).
 - **Backend API**: ASP.NET Core minimal-API + MediatR (CQRS) on `http://localhost:5003` (EF Core, SQL Server `(localdb)\mssqllocaldb`, Hangfire, Serilog).
 - **Database**: SQL Server LocalDB `NovaShopDb`. Hangfire storage is in the same database (`Hangfire.*` schema).
 
@@ -25,7 +25,7 @@ The shop is **functional end-to-end for browsing, cart, and order placement**, b
 Browser / Next.js (localhost:3000)
         │  fetch via API_GATEWAY_URL
         ▼
-API Gateway (YARP, :5100)
+API Gateway (YARP, :5250)
    - JWT bearer validation (Jwt:Key from User Secrets)
    - Global rate limit (600/min) + per-route auth rules
    - CORS (allowed origin http://localhost:3000)
@@ -504,7 +504,7 @@ Entities (NovaShopDb, SQL Server LocalDB):
 
 **Navigation**: customer layout (header with cart badge, lang switch, account/logout) ↔ admin layout (sidebar). Login/register redirect to `/products`. Checkout redirects to `/orders/[id]` on success.
 
-**APIs used**: all via `API_GATEWAY_URL` (= `http://localhost:5100`). Public reads use SSR `fetch` (revalidate cache); authed writes use `authFetch` with bearer cookie.
+**APIs used**: all via `API_GATEWAY_URL` (= `http://localhost:5250`). Public reads use SSR `fetch` (revalidate cache); authed writes use `authFetch` with bearer cookie.
 
 ---
 

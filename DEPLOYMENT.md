@@ -29,7 +29,7 @@ Notes:
 - Node version: 24 (set in Cloudflare Pages dashboard if required)
 - Required env var (build + runtime): `NEXT_PUBLIC_API_GATEWAY_URL`
   - Value: `https://<gateway>.onrender.com` (the Gateway's public URL)
-  - Falls back to `http://localhost:5100` if unset (dev only).
+  - Falls back to `http://localhost:5250` if unset (dev only).
 - The frontend proxies ALL API traffic through the Gateway (see `frontend/lib/config.ts`).
   Do NOT hardcode the future Render URL in code; set it via the env var above.
 

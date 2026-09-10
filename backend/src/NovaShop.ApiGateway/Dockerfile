@@ -15,7 +15,7 @@ RUN dotnet publish "NovaShop.ApiGateway.csproj" -c Release -o /app/publish /p:Us
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
-# Install curl so the container healthcheck (curl -f http://localhost:5100/health) can run.
+# Install curl so the container healthcheck (curl -f http://localhost:5250/health) can run.
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/publish .
@@ -29,6 +29,6 @@ RUN chmod +x /app/docker-entrypoint.sh
 ENV DOTNET_SYSTEM_GLOBALIZATION_APARTMENT=1
 
 # EXPOSE documents the default port; Render overrides with $PORT at runtime.
-EXPOSE 5100
+EXPOSE 5250
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]

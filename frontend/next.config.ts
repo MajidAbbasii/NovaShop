@@ -1,12 +1,20 @@
+import path from 'path';
+
 const nextConfig = {
   images: {
     unoptimized: true,
     remotePatterns: [
-      { protocol: 'https' as const, hostname: 'picsum.photos' },
-      { protocol: 'https' as const, hostname: '*.picsum.photos' },
-      { protocol: 'http' as const, hostname: 'localhost', port: '5100' },
-      { protocol: 'https' as const, hostname: 'localhost' },
+      { protocol: 'https', hostname: 'picsum.photos' },
+      { protocol: 'https', hostname: '*.picsum.photos' },
+      { protocol: 'http', hostname: 'localhost', port: '5250' },
+      { protocol: 'https', hostname: 'localhost' },
+      { protocol: 'http', hostname: '*', port: '5250' },
+      { protocol: 'https', hostname: '*' },
     ],
+  },
+
+  turbopack: {
+    root: path.resolve(__dirname),
   },
 };
 

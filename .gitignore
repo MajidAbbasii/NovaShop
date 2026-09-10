@@ -120,6 +120,11 @@ $RECYCLE.BIN/
 *.backup
 stackdump
 *.stackdump
+tmp/
+test-bind-*
+tmp-start.js
+nul
+backend/src/NovaShop.Api/start_api.bat
 
 ######################
 # Hermes Agent artifacts

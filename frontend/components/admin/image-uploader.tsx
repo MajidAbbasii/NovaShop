@@ -73,7 +73,7 @@ export function ImageUploader({
       formData.append("category", "product")
 
       // All API traffic goes through the API Gateway (see lib/config.ts).
-      const uploadUrl = `${process.env.NEXT_PUBLIC_API_GATEWAY_URL ?? 'http://localhost:5100'}/api/images/upload`
+      const uploadUrl = `${process.env.NEXT_PUBLIC_API_GATEWAY_URL ?? 'http://localhost:5250'}/api/images/upload`
 
       const token =
         typeof window !== "undefined"

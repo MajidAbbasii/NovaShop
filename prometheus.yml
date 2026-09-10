@@ -22,7 +22,7 @@ scrape_configs:
   # API Gateway (YARP reverse proxy)
   - job_name: "novashop-api-gateway"
     static_configs:
-      - targets: ["novashop-api-gateway:5100"]
+      - targets: ["novashop-api-gateway:5250"]
     metrics_path: /metrics
     scrape_interval: 15s
     scrape_timeout: 10s

@@ -36,13 +36,13 @@ data:
       # NovaShop API Gateway
       - job_name: 'novashop-api-gateway'
         static_configs:
-          - targets: ['novashop-api-gateway:5100']
+          - targets: ['novashop-api-gateway:5250']
         honor_labels: true
         metrics_path: /metrics
         scrape_interval: 15s
         scrape_timeout: 10s
         http_sd_configs:
-          - url: http://novashop-api-gateway:5100/api/v1/targets
+          - url: http://novashop-api-gateway:5250/api/v1/targets
             refresh_interval: 30s
 
       # Product API Service

@@ -1,8 +1,8 @@
 import { test, expect, Page } from '@playwright/test';
 
-const FRONTEND_URL = 'http://localhost:3000';
-const GATEWAY_URL = 'http://localhost:6000';
-const API_URL = 'http://localhost:5003';
+const FRONTEND_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
+const GATEWAY_URL = process.env.PLAYWRIGHT_GATEWAY_URL || 'http://localhost:5250';
+const API_URL = process.env.PLAYWRIGHT_API_URL || 'http://localhost:5000';
 
 const USERNAME = `e2e_browser4_${Date.now()}`;
 const PASSWORD = 'TestPass123!';
@@ -20,7 +20,6 @@ test.describe('NovaShop Full E2E Flow — Browser Tests', () => {
     test('2. API Gateway health check', async ({ page }) => {
       const res = await page.goto(`${GATEWAY_URL}/health`);
       expect(res?.status()).toBe(200);
-      await expect(page).toHaveTitle(/NovaShop/ig);
     });
 
     test('3. Protected route redirects to login', async ({ page }) => {
@@ -52,7 +51,7 @@ test.describe('NovaShop Full E2E Flow — Browser Tests', () => {
       await page.fill('#firstName', 'Test');
       await page.fill('#lastName', 'User');
       await page.fill('#email', `${USERNAME}@test.com`);
-      await page.fill('#phone', '09120000000');
+      await page.fill('#phone', `09${Math.floor(100000000 + Math.random() * 900000000)}`);
       await page.fill('#password', PASSWORD);
       await page.fill('#city', 'تهران');
       await page.fill('#postalCode', '1234567890');
@@ -473,17 +472,19 @@ test.describe('NovaShop Full E2E Flow — Browser Tests', () => {
 // Helper functions
 async function loginAsCustomer(page: Page): Promise<void> {
   await page.goto(`${FRONTEND_URL}/login`);
+  await page.waitForSelector('#username', { state: 'visible' });
   await page.fill('#username', USERNAME);
   await page.fill('#password', PASSWORD);
-  await page.click('button[type="submit"]');
+  await page.locator('form:has(#username) button[type="submit"]').click();
   await page.waitForURL('**/products', { timeout: 15000 });
 }
 
 async function adminLogin(page: Page): Promise<void> {
   await page.goto(`${FRONTEND_URL}/admin/login`);
+  await page.waitForSelector('#admin-username', { state: 'visible' });
   await page.fill('#admin-username', ADMIN_USER);
   await page.fill('#admin-password', ADMIN_PASS);
-  await page.click('button[type="submit"]');
+  await page.locator('form:has(#admin-username) button[type="submit"]').click();
   try {
     await page.waitForURL('**/admin', { timeout: 10000 });
   } catch {

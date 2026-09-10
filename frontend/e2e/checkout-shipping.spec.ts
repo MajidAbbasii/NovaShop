@@ -9,7 +9,7 @@ import { test, expect, type APIRequestContext } from '@playwright/test';
  * depend on a hard-coded product id that may not exist in a given dataset.
  */
 
-const GW = 'http://localhost:5100';
+const GW = process.env.PLAYWRIGHT_GATEWAY_URL || 'http://localhost:5250';
 
 interface ProductSummary {
   id: number;

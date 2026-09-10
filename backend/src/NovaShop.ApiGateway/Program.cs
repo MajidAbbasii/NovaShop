@@ -46,6 +46,17 @@ public class Program
     {
         var builder = WebApplication.CreateSlimBuilder(args);
 
+        // Local development default: listen on 5250.
+        // In Docker/Render/CI, override with ASPNETCORE_HTTP_PORTS or ASPNETCORE_URLS.
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_HTTP_PORTS"))
+            && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
+        {
+            builder.WebHost.ConfigureKestrel(options =>
+            {
+                options.ListenLocalhost(5250);
+            });
+        }
+
         // Clear all default configuration sources (JSON with reloadOnChange: true, etc.)
         // and re-add them with reloadOnChange: false to prevent FileSystemWatcher creation.
         builder.Configuration.Sources.Clear();

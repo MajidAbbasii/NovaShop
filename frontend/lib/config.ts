@@ -4,7 +4,7 @@
  * Never call backend services directly.
  */
 export const API_GATEWAY_URL =
-  process.env.NEXT_PUBLIC_API_GATEWAY_URL ?? 'http://localhost:5100';
+  process.env.NEXT_PUBLIC_API_GATEWAY_URL ?? 'http://localhost:5250';
 
 /** Prefix gateway for relative image paths; absolute URLs pass through. */
 export const resolveImageUrl = (url?: string | null): string =>

@@ -28,7 +28,7 @@ This setup provides complete visibility into API performance, system health, and
 
 Ensure all following services are running:
 
-- ✅ **NovaShop API Gateway**: `http://localhost:5100`
+- ✅ **NovaShop API Gateway**: `http://localhost:5250`
 - ✅ **Product API**: `http://localhost:5001`
 - ✅ **Auth API**: `http://localhost:5002`
 - ✅ **Order API**: `http://localhost:5003`
@@ -71,7 +71,7 @@ docker ps | grep novashop
 - Metrics endpoint: `http://localhost:9090/metrics`
 
 ### API Gateway Health
-- URL: `http://localhost:5100/health`
+- URL: `http://localhost:5250/health`
 
 ## Step 3: Configure Data Sources
 
@@ -325,7 +325,7 @@ else
 fi
 
 echo "3. Checking API Gateway..."
-if curl -f http://localhost:5100/health > /dev/null 2>&1; then
+if curl -f http://localhost:5250/health > /dev/null 2>&1; then
     echo "✅ API Gateway is healthy"
 else
     echo "❌ API Gateway is not healthy"

@@ -35,7 +35,7 @@ Grafana (:3000)
 
 | Service | Port | Purpose |
 |---------|------|---------|
-| novashop-api-gateway | 5100 | YARP reverse proxy, /health, /metrics |
+| novashop-api-gateway | 5250 | YARP reverse proxy, /health, /metrics |
 | product-api, auth-api, etc. | 80 | API services, /health, /metrics |
 | otel-collector | 4317/4318/9090 | OTLP receiver + Prometheus exporter |
 | prometheus | 9090 | Metrics storage & querying |
@@ -74,7 +74,7 @@ Services start in dependency order. Wait ~60s for all health checks to pass.
 - `/metrics` — Prometheus metrics (via prometheus-net)
 - `/api/*` — Business endpoints
 
-### API Gateway (:5100)
+### API Gateway (:5250)
 - `/health` — Gateway health check
 - `/metrics` — Gateway Prometheus metrics
 

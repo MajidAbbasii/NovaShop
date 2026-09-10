@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const FRONTEND_URL = 'http://localhost:3000';
-const API_URL = 'http://localhost:5000';
+const API_URL = process.env.PLAYWRIGHT_API_URL || 'http://localhost:5000';
 
 test.describe('NovaShop Full E2E Flow', () => {
   let token: string;

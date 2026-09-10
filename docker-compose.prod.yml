@@ -1,6 +1,6 @@
 # NovaShop Production Docker Compose (app + infra only, no monitoring stack)
 # Architecture:
-#   Nginx (serves prebuilt Frontend) -> API Gateway (:5100) -> NovaShop.Api (:5000) -> PostgreSQL + Redis
+#   Nginx (serves prebuilt Frontend) -> API Gateway (:5250) -> NovaShop.Api (:5000) -> PostgreSQL + Redis
 # NOTE: NovaShop is a 2-service backend (ApiGateway + Api monolith), NOT microservices.
 # Do NOT spawn multiple copies of NovaShop.Api — that would duplicate Hangfire
 # recurring jobs and create competing workers.
@@ -41,10 +41,11 @@ services:
       context: .
       dockerfile: backend/src/NovaShop.ApiGateway/Dockerfile
     ports:
-      - "5100:5100"
+      - "5250:5250"
     environment:
-      - ASPNETCORE_URLS=http://+:5100
-      - GATEWAY_URL=http://+:5100
+      - ASPNETCORE_URLS=http://+:5250
+      - GATEWAY_URL=http://+:5250
+      - API_BASE_URL=http://novashop-api:5000
       - ASPNETCORE_ENVIRONMENT=Production
       # Override YARP backend cluster address so the gateway proxies to the
       # API container (compose DNS) instead of localhost (which is the gateway itself in Docker).
@@ -56,7 +57,7 @@ services:
     networks:
       - novashop-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5100/health" ]
+      test: ["CMD", "curl", "-f", "http://localhost:5250/health" ]
       interval: 30s
       timeout: 10s
       retries: 3

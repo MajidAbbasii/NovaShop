@@ -1,5 +1,6 @@
 using MediatR;
 using NovaShop.Application.Features.Products.Commands;
+using NovaShop.Application.Features.Products.Dtos;
 using NovaShop.Application.Features.Products.Queries;
 
 namespace NovaShop.Api.Endpoints;
@@ -65,13 +66,15 @@ public static class ProductsEndpoints
         app.MapGet("/api/products/search", async (
             IMediator mediator,
             string query = "",
+            string? term = null,
             int pageNumber = 1,
             int pageSize = 20,
             string sortBy = "relevance") =>
         {
+            var searchTerm = string.IsNullOrWhiteSpace(term) ? query : term;
             var q = new SearchProductsQuery
             {
-                Query = query,
+                Query = searchTerm,
                 PageNumber = pageNumber,
                 PageSize = pageSize,
                 SortBy = sortBy
@@ -85,10 +88,14 @@ public static class ProductsEndpoints
         // Auto-complete suggestions
         app.MapGet("/api/products/suggestions", async (
             IMediator mediator,
-            string q,
+            string? q,
             int max = 8) =>
         {
-            var result = await mediator.Send(new GetProductSuggestionsQuery(q, max));
+            var query = string.IsNullOrWhiteSpace(q) ? string.Empty : q.Trim();
+            if (query.Length < 2)
+                return Results.Ok(new List<ProductSuggestion>());
+
+            var result = await mediator.Send(new GetProductSuggestionsQuery(query, max));
             return Results.Ok(result);
         })
         .WithName("ProductSuggestions")

@@ -150,4 +150,62 @@ public class ProductEndpointsIntegrationTests : IClassFixture<IntegrationWebAppl
         products!.Items.Should().HaveCount(1);
         products.Items[0].Name.Should().Contain("Laptop");
     }
+
+    [Fact]
+    public async Task GetProductSuggestions_MissingQuery_ReturnsEmptyList()
+    {
+        var response = await _client.GetAsync("/api/products/suggestions");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var suggestions = await response.Content.ReadFromJsonAsync<List<ProductSuggestion>>();
+        suggestions.Should().NotBeNull();
+        suggestions.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetProductSuggestions_EmptyQuery_ReturnsEmptyList()
+    {
+        var response = await _client.GetAsync("/api/products/suggestions?q=");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var suggestions = await response.Content.ReadFromJsonAsync<List<ProductSuggestion>>();
+        suggestions.Should().NotBeNull();
+        suggestions.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetProductSuggestions_ValidQuery_ReturnsMatchingSuggestions()
+    {
+        var user = await _factory.CreateTestUserAsync("product-suggestions-1", "Admin");
+        var token = await _factory.GetAuthTokenAsync(user);
+        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        await _client.PostAsJsonAsync("/api/products", new CreateProductCommand("Laptop Suggestion Test", 199.99m, "https://example.com/laptop-sugg.jpg", 10, await _factory.GetFirstCategoryIdAsync())
+        {
+            Description = "Suggestion laptop"
+        });
+
+        var response = await _client.GetAsync("/api/products/suggestions?q=Laptop");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var suggestions = await response.Content.ReadFromJsonAsync<List<ProductSuggestion>>();
+        suggestions.Should().NotBeNull();
+        suggestions.Should().Contain(s => s.Name.Contains("Laptop"));
+    }
+
+    [Fact]
+    public async Task GetProductSuggestions_PersianQuery_ReturnsMatchingSuggestions()
+    {
+        var user = await _factory.CreateTestUserAsync("product-suggestions-persian-1", "Admin");
+        var token = await _factory.GetAuthTokenAsync(user);
+        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        await _client.PostAsJsonAsync("/api/products", new CreateProductCommand("عروسک بافتنی پاندا", 299.99m, "https://example.com/panda-sugg.jpg", 10, await _factory.GetFirstCategoryIdAsync())
+        {
+            Description = "عروسک پاندا"
+        });
+
+        var response = await _client.GetAsync("/api/products/suggestions?q=پاندا");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var suggestions = await response.Content.ReadFromJsonAsync<List<ProductSuggestion>>();
+        suggestions.Should().NotBeNull();
+        suggestions.Should().Contain(s => s.Name.Contains("پاندا"));
+    }
 }
