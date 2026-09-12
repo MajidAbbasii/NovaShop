@@ -9,159 +9,64 @@
   "panels": [
     {
       "id": 1,
-      "type": "graph",
-      "title": "Orders Created (24h)",
+      "type": "stat",
+      "title": "Active API Requests",
       "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
       "targets": [
         {
-          "expr": "sum by(service) (rate(orders_created_total[5m]))",
-          "legendFormat": "{{service}}",
+          "expr": "sum(http_requests_in_progress)",
+          "legendFormat": "Active Requests",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "unit": "short",
-        "title": "Orders/sec"
+        "title": "Count"
       }
     },
     {
       "id": 2,
       "type": "graph",
-      "title": "Revenue (24h)",
+      "title": "Request Rate by Status",
       "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
       "targets": [
         {
-          "expr": "sum by(service) (rate(revenue_total{currency=\"USD\"}[5m]))",
-          "legendFormat": "{{service}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "unit": "currencyUSD",
-        "title": "Revenue/sec"
-      }
-    },
-    {
-      "id": 3,
-      "type": "stat",
-      "title": "Total Products",
-      "gridPos": { "x": 0, "y": 8, "w": 6, "h": 4 },
-      "targets": [
-        {
-          "expr": "novashop_products_total",
-          "legendFormat": "Products",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "unit": "short",
-        "title": "Count"
-      }
-    },
-    {
-      "id": 4,
-      "type": "stat",
-      "title": "Total Categories",
-      "gridPos": { "x": 6, "y": 8, "w": 6, "h": 4 },
-      "targets": [
-        {
-          "expr": "novashop_categories_total",
-          "legendFormat": "Categories",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "unit": "short",
-        "title": "Count"
-      }
-    },
-    {
-      "id": 5,
-      "type": "stat",
-      "title": "Low Stock Products",
-      "gridPos": { "x": 12, "y": 8, "w": 6, "h": 4 },
-      "targets": [
-        {
-          "expr": "novashop_products_low_stock_total",
-          "legendFormat": "Low Stock",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "unit": "short",
-        "title": "Count",
-        "thresholds": [
-          { "value": 1, "color": "orange" },
-          { "value": 5, "color": "red" }
-        ]
-      }
-    },
-    {
-      "id": 6,
-      "type": "stat",
-      "title": "Registered Users",
-      "gridPos": { "x": 18, "y": 8, "w": 6, "h": 4 },
-      "targets": [
-        {
-          "expr": "novashop_users_registered_total",
-          "legendFormat": "Users",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "unit": "short",
-        "title": "Count"
-      }
-    },
-    {
-      "id": 7,
-      "type": "graph",
-      "title": "Cart Operations",
-      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
-      "targets": [
-        {
-          "expr": "sum by(operation) (rate(novashop_cart_operations_total[5m]))",
-          "legendFormat": "{{operation}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "unit": "reqps",
-        "title": "Operations/sec"
-      }
-    },
-    {
-      "id": 8,
-      "type": "graph",
-      "title": "Active Users (1h)",
-      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
-      "targets": [
-        {
-          "expr": "sum by(service) (rate(active_users_total[1h]))",
-          "legendFormat": "{{service}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "unit": "short",
-        "title": "Users"
-      }
-    },
-    {
-      "id": 9,
-      "type": "graph",
-      "title": "Order Status Distribution",
-      "gridPos": { "x": 0, "y": 20, "w": 24, "h": 8 },
-      "targets": [
-        {
-          "expr": "sum by(status) (rate(orders_status_total[5m]))",
+          "expr": "sum by(status) (rate(http_requests_total[5m]))",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
       ],
       "fieldConfig": {
-        "unit": "short",
-        "title": "Orders/sec by Status"
+        "unit": "reqps",
+        "title": "Requests/sec"
+      }
+    },
+    {
+      "id": 3,
+      "type": "text",
+      "title": "Business metrics — not yet instrumented",
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 6 },
+      "content": "Custom business metrics (orders, revenue, products, users, cart operations) are not yet registered in the application. When they are added via prometheus-net's Metrics.CreateCounterGauge/Histogram API, update this dashboard to reference them.\n\nCurrently available metrics are HTTP-level only:\n- http_requests_total (by method, path, status)\n- http_request_duration_seconds_bucket (histogram)\n- http_requests_in_progress",
+      "options": {
+        "content": "<p>Custom business metrics (orders, revenue, products, users) are not yet instrumented. Add via prometheus-net Metrics API and update this dashboard.</p>",
+        "mode": "html"
+      }
+    },
+    {
+      "id": 4,
+      "type": "graph",
+      "title": "Request Duration (P95)",
+      "gridPos": { "x": 0, "y": 14, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+          "legendFormat": "P95 Latency (s)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "unit": "seconds",
+        "title": "Seconds"
       }
     }
   ]

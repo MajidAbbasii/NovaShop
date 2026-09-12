@@ -308,7 +308,7 @@ Status: ✅ Implemented (provider selection, send, persist, retry). ⚠️ Deliv
 
 ## 15. Hangfire
 
-Hangfire uses SQL Server storage; server started with `Queues = [critical,default,notifications,sms,maintenance]` and configurable `WorkerCount`. Global retry: `Attempts` from `Hangfire:RetryAttempts` (default 3), custom `RetryDelaysInSeconds`, `OnAttemptsExceeded=Delete`. Dashboard at `/hangfire` protected by `AdminHangfireAuthorizationFilter` (shared `DashboardAccessKey` from User Secrets or Admin role).
+Hangfire uses PostgreSQL storage; server started with `Queues = [critical,default,notifications,sms,maintenance]` and configurable `WorkerCount`. Global retry: `Attempts` from `Hangfire:RetryAttempts` (default 3), custom `RetryDelaysInSeconds`, `OnAttemptsExceeded=Delete`. Dashboard at `/hangfire` protected by `AdminHangfireAuthorizationFilter` (shared `DashboardAccessKey` from User Secrets or Admin role).
 
 **Recurring jobs** (registered in `ProgramHelpers.ConfigurePipeline`):
 
@@ -602,7 +602,7 @@ Entities (NovaShopDb, SQL Server LocalDB):
 9. **Localization is FE-only** — backend messages hardcoded Persian; no admin translation UI; missing keys fall back to key string.
 10. **Image validation** — file type/size limits not verified in `UploadImageCommandHandler`/`LocalImageStorage`.
 11. **`ConfirmReservation` not called on Paid** — reserved stock not zeroed on payment; inventory math relies on reservation bookkeeping that isn't fully closed (ledger still records correctly).
-12. **OpenTelemetry** configured but no OTLP collector in this environment (exports nowhere).
+12. **OpenTelemetry** configured for traces only; OTLP exporter enabled only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. No collector in this environment means traces are collected in-process but not exported (app starts and runs normally regardless).
 13. **No product "status" field** — availability derived from `Stock>0`; no explicit Active/Inactive/Draft toggle beyond stock.
 14. **Custom-doll production stage** — no distinct "in production / shipped as custom" status beyond `CustomerAccepted`.
 

@@ -31,6 +31,7 @@
 //
 
 using System;
+using System.Net.Http;
 using System.Threading.RateLimiting;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -162,9 +163,7 @@ public class Program
             };
         });
 
-        // Health checks
-        builder.Services.AddHealthChecks()
-            .AddCheck("gateway", () => HealthCheckResult.Healthy("Gateway is healthy"));
+        // Rate limiting and forwarded headers are configured above; health checks below.
 
         // Logging
         builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting", LogLevel.Warning);
@@ -188,6 +187,21 @@ public class Program
             options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("100.64.0.0/10"));
             options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("169.254.0.0/16"));
         });
+
+        // Health checks: gateway liveness + downstream API reachability.
+        // The gateway probes the backend API's /health endpoint using the same
+        // destination address configured for YARP (appsettings or API_BASE_URL).
+        // This avoids a circular call — the gateway calls the API directly, not itself.
+        builder.Services.AddHttpClient("GatewayHealthCheck")
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                // Allow connecting to the backend even on localhost in dev/Docker.
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            });
+
+        builder.Services.AddHealthChecks()
+            .AddCheck("gateway", () => HealthCheckResult.Healthy("Gateway is healthy"))
+            .AddCheck<ApiBackendHealthCheck>("api-backend");
 
         var app = builder.Build();
 
@@ -251,5 +265,78 @@ public class CorrelationMiddleware
             correlationId,
             context.Connection.RemoteIpAddress?.ToString() ?? "Unknown");
         await _next(context);
+    }
+}
+
+/// <summary>
+/// Probes the downstream NovaShop.Api /health endpoint to verify backend reachability.
+/// Uses the same ReverseProxy destination address (or API_BASE_URL env var) that YARP
+/// uses to proxy requests. Returns Degraded when the API is unreachable so the gateway
+/// health endpoint reflects true backend status without causing a hard 503 that would
+/// make Render restart the gateway while the API itself may simply be starting up.
+/// </summary>
+public class ApiBackendHealthCheck : IHealthCheck
+{
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IConfiguration _configuration;
+    private readonly ILogger<ApiBackendHealthCheck> _logger;
+
+    public ApiBackendHealthCheck(
+        IHttpClientFactory httpClientFactory,
+        IConfiguration configuration,
+        ILogger<ApiBackendHealthCheck> logger)
+    {
+        _httpClientFactory = httpClientFactory;
+        _configuration = configuration;
+        _logger = logger;
+    }
+
+    public async Task<HealthCheckResult> CheckHealthAsync(
+        HealthCheckContext context,
+        CancellationToken cancellationToken = default)
+    {
+        // Resolve the backend address from the same config key YARP uses, falling
+        // back to API_BASE_URL env var (override on Render), then localhost dev default.
+        var backendAddress = _configuration["ReverseProxy:Clusters:backend-cluster:Destinations:destination1:Address"]
+            ?? Environment.GetEnvironmentVariable("API_BASE_URL")
+            ?? "http://localhost:5000";
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient("GatewayHealthCheck");
+            var response = await client.GetAsync(
+                new Uri(new Uri(backendAddress), "/health"),
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return HealthCheckResult.Healthy("API backend is reachable.");
+            }
+
+            _logger.LogWarning(
+                "API backend health check returned {StatusCode} from {Url}",
+                (int)response.StatusCode, backendAddress);
+
+            return HealthCheckResult.Degraded(
+                $"API backend returned HTTP {(int)response.StatusCode}.");
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogWarning(ex,
+                "API backend health check failed — backend unreachable at {Url}",
+                backendAddress);
+
+            return HealthCheckResult.Degraded(
+                "API backend unreachable. " + ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "API backend health check threw an unexpected error for {Url}",
+                backendAddress);
+
+            return HealthCheckResult.Unhealthy(
+                "API backend health check error. " + ex.Message);
+        }
     }
 }

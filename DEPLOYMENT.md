@@ -59,7 +59,12 @@ Notes:
 - EF Core migrations run automatically at startup (`Database.Migrate()`) and seed demo
   data on first run. No separate migrator step.
 - Secrets via env vars (see below). No User Secrets in production.
-- Hangfire dashboard is enabled; protect it in production (do not expose publicly).
+- Hangfire dashboard is enabled; protect it in production via
+  `Hangfire__DashboardAccessKey` (required; see "Hangfire Dashboard" below).
+
+## Hangfire Dashboard
+
+Set `Hangfire__DashboardAccessKey` to a strong secret value in production. The dashboard reads this from configuration (`Hangfire:DashboardAccessKey`). When the key is set, the dashboard page is access-protected — an unauthenticated user receives a 401. The key is passed as a query string parameter `?accessKey=<key>` or `DashboardAccessKey` cookie. When the key is NOT set, the dashboard behaves per the `AdminHangfireAuthorizationFilter` (admin role required). Never expose the dashboard publicly without the access key.
 
 ## Database — Azure SQL Database
 
@@ -92,6 +97,8 @@ Notes:
 - `Sms__SenderNumber`  (Kavenegar)
 - `Sms__StoreName`
 - `CORS_ALLOWED_ORIGINS`  (optional; CORS is enforced at the Gateway)
+- `Hangfire__DashboardAccessKey`  (REQUIRED for production — see Hangfire Dashboard below)
+- `OTEL_EXPORTER_OTLP_ENDPOINT`  (optional; if unset, traces are collected in-process but not exported)
 
 ### Gateway (NovaShop.ApiGateway)
 - `ASPNETCORE_ENVIRONMENT` = `Production`
@@ -131,8 +138,7 @@ Notes:
   which is NOT persisted on Render Free. Uploaded images disappear on deploy/restart. This is
   a DEMO LIMITATION / FUTURE PRODUCTION TASK (move to Azure Blob / Cloudflare R2). Seed/demo
   product images use remote `picsum.photos` URLs, so the catalog still renders without uploads.
-- **Single API instance:** Run exactly ONE NovaShop.Api. Multiple instances would execute
-  Hangfire recurring jobs more than once (duplicate workers). Do not scale the API above 1.
+- **Single API instance:** Run exactly ONE NovaShop.Api. Multiple instances would execute some Hangfire recurring jobs concurrently (e.g. `release-expired-reservations` and `payment-reconciliation` have `[DisableConcurrentExecution]` applied; others rely on DB-level idempotency). Do not scale the API above 1 without reviewing each job's concurrency.
 - **Kavenegar SMS:** Requires a valid Kavenegar account + credit. Until configured, set
   `Sms__Provider=Log` (messages are logged, not sent). Production uses `Sms__Provider=Kavenegar`
   with `Sms__ApiKey`.

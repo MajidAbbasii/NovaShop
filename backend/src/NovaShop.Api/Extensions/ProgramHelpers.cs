@@ -20,12 +20,20 @@ public static class ProgramHelpers
 {
     public static void ConfigureLogging(WebApplicationBuilder builder)
     {
-        Log.Logger = new LoggerConfiguration()
+        var loggerConfig = new LoggerConfiguration()
             .ReadFrom.Configuration(builder.Configuration)
             .Enrich.FromLogContext()
-            .WriteTo.Console()
-            .WriteTo.File("logs/novashop-.log", rollingInterval: Serilog.RollingInterval.Day)
-            .CreateLogger();
+            .WriteTo.Console();
+
+        // File logging is only useful locally (Render's filesystem is ephemeral and
+        // only captures stdout/stderr). The File sink is disabled in Production to
+        // avoid wasting disk space and giving a false impression of log persistence.
+        if (builder.Environment.IsDevelopment())
+        {
+            loggerConfig.WriteTo.File("logs/novashop-.log", rollingInterval: Serilog.RollingInterval.Day);
+        }
+
+        Log.Logger = loggerConfig.CreateLogger();
 
         builder.Host.UseSerilog();
     }
@@ -170,6 +178,10 @@ public static class ProgramHelpers
         // Authentication & Authorization
         app.UseAuthentication();
         app.UseAuthorization();
+
+        // Serilog request-completion logging — logs one entry per HTTP request
+        // (method, path, status code, duration). Active in all environments.
+        app.UseSerilogRequestLogging();
 
         // Anti-forgery for form-based endpoints (image upload)
         app.UseAntiforgery();

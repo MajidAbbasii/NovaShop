@@ -13,11 +13,11 @@
     <PackageReference Include="Hangfire.Core" Version="1.8.23" />
     <PackageReference Include="Hangfire.PostgreSQL" Version="1.21.1" />
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.23" />
-    <PackageReference Include="log4net" Version="3.3.2" />
+    <!-- log4net removed — unused; Serilog is the only logging framework -->
     <PackageReference Include="MassTransit" Version="9.1.2" />
     <PackageReference Include="MassTransit.RabbitMQ" Version="9.1.2" />
     <PackageReference Include="MediatR" Version="14.1.0" />
-    <!-- MediatR.Extensions.Microsoft.DependencyInjection removed: obsolete since MediatR 12, DI built-in -->
+    <!-- MediatR.Extensions.MicrosoftDependencyInjection removed: obsolete since MediatR 12, DI built-in -->
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
@@ -27,17 +27,18 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.9" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.9" />
+    <!-- OpenTelemetry: traces only. Metrics handled by prometheus-net (/metrics endpoint).
+         Runtime and SqlClient instrumentation removed — no longer collecting OTel metrics. -->
     <PackageReference Include="OpenTelemetry" Version="1.16.0" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.16.0" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.16.0" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.16.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.16.0" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.16.7" />
     <PackageReference Include="Serilog.AspNetCore" Version="7.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="4.1.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
-    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.16.0" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.16.0" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.16.0" />
+    <!-- log4net pending removal — verify it is unused before removing -->
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageReference Include="AspNetCore.HealthChecks.Npgsql" Version="2.2.0" />
     <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="6.0.0" />

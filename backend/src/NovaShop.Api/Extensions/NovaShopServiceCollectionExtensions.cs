@@ -23,9 +23,8 @@ using NovaShop.Infrastructure.Data;
 using NovaShop.Infrastructure.Repositories;
 using NovaShop.Infrastructure.Services;
 using NovaShop.Application.Features.Products.Commands;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Trace;
 using OpenTelemetry;
+using OpenTelemetry.Trace;
 using System.Text;
 
 namespace NovaShop.Api.Extensions;
@@ -111,20 +110,36 @@ public static class NovaShopServiceCollectionExtensions
 
     private static void ConfigureOpenTelemetry(IServiceCollection services)
     {
-        services.AddOpenTelemetry()
-                .WithMetrics(metrics =>
-                {
-                    metrics.AddAspNetCoreInstrumentation();
-                    metrics.AddHttpClientInstrumentation();
-                    metrics.AddRuntimeInstrumentation();
-                })
-                .WithTracing(tracing =>
-                {
-                    tracing.AddAspNetCoreInstrumentation();
-                    tracing.AddHttpClientInstrumentation();
-                    tracing.AddSource("NovaShop");
-                })
-                .UseOtlpExporter();
+        // Metrics: handled by prometheus-net (UseMetricServer / UseHttpMetrics in ProgramHelpers).
+        //   The Prometheus server scrapes /metrics directly from each service. OpenTelemetry
+        //   metrics are intentionally NOT collected here to avoid duplicating the same HTTP
+        //   request metrics in two pipelines.
+        //
+        // Traces: OpenTelemetry is the sole tracing pipeline. The OTLP exporter is
+        //   configured ONLY when OTEL_EXPORTER_OTLP_ENDPOINT is set (e.g. in docker-compose
+        //   or via a hosted collector). If the env var is absent, tracing is still collected
+        //   in-process but not exported — the app starts and runs normally regardless.
+        //   This makes the app safe for Render, where no OTLP collector is configured by default.
+        var openTelemetryBuilder = services.AddOpenTelemetry()
+            .WithTracing(tracing =>
+            {
+                tracing.AddAspNetCoreInstrumentation();
+                tracing.AddHttpClientInstrumentation();
+                tracing.AddSource("NovaShop");
+            });
+
+        // Only register the OTLP exporter when an endpoint is explicitly configured.
+        // The OpenTelemetry SDK reads OTEL_EXPORTER_OTLP_ENDPOINT automatically,
+        // but calling UseOtlpExporter() unconditionally still creates a background
+        // exporter thread targeting localhost:4317. We guard it so the app works
+        // cleanly in environments without a collector (e.g. Render free tier).
+        // Activity sources still function for in-process trace correlation even
+        // without an exporter — spans are simply not persisted/exported.
+        if (!string.IsNullOrWhiteSpace(
+            Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT")))
+        {
+            openTelemetryBuilder.UseOtlpExporter();
+        }
     }
 
     private static void ConfigureHangfire(IServiceCollection services, IConfiguration configuration)
@@ -144,11 +159,14 @@ public static class NovaShopServiceCollectionExtensions
 
         // Start a server listening on the configured queues (priority order matters:
         // "critical" is drained first). WorkerCount defaults to Hangfire when null.
+        // ShutdownTimeout is aligned with the HostOptions.ShutdownTimeout (30s) set in
+        // ProgramHelpers so in-flight Hangfire jobs complete during Render's SIGTERM.
         services.AddHangfireServer(options =>
         {
             options.Queues = hangfireOptions.Queues;
             if (hangfireOptions.WorkerCount is > 0)
                 options.WorkerCount = hangfireOptions.WorkerCount.Value;
+            options.ShutdownTimeout = TimeSpan.FromSeconds(30);
         });
     }
 

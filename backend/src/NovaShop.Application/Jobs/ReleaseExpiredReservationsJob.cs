@@ -1,3 +1,4 @@
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NovaShop.Domain.Entities;
@@ -5,6 +6,7 @@ using NovaShop.Infrastructure.Data;
 
 namespace NovaShop.Application.Jobs;
 
+[DisableConcurrentExecution(300)]
 public class ReleaseExpiredReservationsJob
 {
     private readonly NovaShopDbContext _context;
