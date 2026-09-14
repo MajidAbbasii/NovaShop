@@ -3,7 +3,9 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NovaShop.Domain.Exceptions;
+using Serilog.Context;
 
 namespace NovaShop.Api.Middleware;
 
@@ -22,10 +24,12 @@ public static class ApiJson
 public class ExceptionHandlingMiddleware
 {
     private readonly RequestDelegate _next;
+    private readonly ILogger<ExceptionHandlingMiddleware> _logger;
 
-    public ExceptionHandlingMiddleware(RequestDelegate next)
+    public ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
     {
         _next = next;
+        _logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext httpContext)
@@ -36,6 +40,7 @@ public class ExceptionHandlingMiddleware
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Unhandled exception {Method} {Path}", httpContext.Request.Method, httpContext.Request.Path);
             await HandleExceptionAsync(httpContext, ex);
         }
     }
@@ -73,4 +78,27 @@ public static class ExceptionHandlingMiddlewareExtensions
     {
         return app.UseMiddleware<ExceptionHandlingMiddleware>();
     }
+}
+
+public class CorrelationIdMiddleware
+{
+    private readonly RequestDelegate _next;
+    private const string HeaderName = "X-Correlation-ID";
+
+    public CorrelationIdMiddleware(RequestDelegate next) => _next = next;
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        context.Request.Headers.TryGetValue(HeaderName, out var id);
+        var correlationId = string.IsNullOrEmpty(id) ? Guid.NewGuid().ToString() : id.ToString();
+
+        using var _ = LogContext.PushProperty("CorrelationId", correlationId);
+        await _next(context);
+    }
+}
+
+public static class CorrelationIdMiddlewareExtensions
+{
+    public static IApplicationBuilder UseCorrelationId(this IApplicationBuilder app)
+        => app.UseMiddleware<CorrelationIdMiddleware>();
 }

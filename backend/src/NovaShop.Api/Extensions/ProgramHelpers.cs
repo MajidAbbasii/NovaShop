@@ -132,6 +132,10 @@ public static class ProgramHelpers
         // from X-Forwarded-Proto / X-Forwarded-Host so we don't infinitely redirect HTTP->HTTPS.
         app.UseForwardedHeaders();
 
+        // Correlation ID — reads X-Correlation-ID from gateway (or generates one)
+        // and pushes it to Serilog LogContext for all downstream log entries.
+        app.UseCorrelationId();
+
         // Seed Data - Database Migration
         using (var scope = app.Services.CreateScope())
         {
