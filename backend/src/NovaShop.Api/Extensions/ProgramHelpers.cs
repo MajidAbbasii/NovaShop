@@ -316,6 +316,8 @@ public static class ProgramHelpers
         app.MapCustomDollRequestsEndpoints();
         app.MapTranslationEndpoints();
         app.MapShippingEndpoints();
+        // Temporary — REMOVE after migration: app.MapDatabaseAdminEndpoints();
+        app.MapDatabaseAdminEndpoints();
 
     }
 }
