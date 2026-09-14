@@ -55,11 +55,8 @@ export async function loadTranslations(locale: Locale): Promise<TranslationMap> 
       } catch {
         /* ignore */
       }
-      // 4) last resort: empty map. The Backend remains authoritative; components
-      //    render the key itself (never a full static dictionary).
-      const empty: TranslationMap = {};
-      memoryCache.set(locale, empty);
-      return empty;
+      // 4) last resort: empty map (NOT cached — next call retries the fetch).
+      return {};
     } finally {
       inFlight.delete(locale);
     }
