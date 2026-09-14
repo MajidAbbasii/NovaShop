@@ -370,8 +370,8 @@ public static class ProgramHelpers
                     Namespace = t.Namespace,
                     Description = t.Description,
                     IsActive = t.IsActive,
-                    CreatedAt = t.CreatedAt,
-                    UpdatedAt = t.UpdatedAt,
+                    CreatedAt = t.CreatedAt.UtcDateTime,
+                    UpdatedAt = t.UpdatedAt.UtcDateTime,
                     CreatedBy = t.CreatedBy,
                     UpdatedBy = t.UpdatedBy,
                 }).ToList();
@@ -409,7 +409,7 @@ public static class ProgramHelpers
                 PostalCode = u.PostalCode,
                 Role = u.Role,
                 IsActive = u.IsActive,
-                CreatedAt = u.CreatedAt,
+                CreatedAt = u.CreatedAt.UtcDateTime,
             }).ToList();
 
             context.Users.AddRange(userEntities);
@@ -443,8 +443,8 @@ public static class ProgramHelpers
         public string? Namespace { get; set; }
         public string? Description { get; set; }
         public bool IsActive { get; set; } = true;
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public DateTimeOffset CreatedAt { get; set; }
+        public DateTimeOffset UpdatedAt { get; set; }
         public string? CreatedBy { get; set; }
         public string? UpdatedBy { get; set; }
     }
@@ -463,7 +463,7 @@ public static class ProgramHelpers
         public string PostalCode { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTimeOffset CreatedAt { get; set; }
     }
 
     private static void MapEndpoints(WebApplication app)
