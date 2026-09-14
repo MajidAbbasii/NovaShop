@@ -52,4 +52,14 @@
     <ProjectReference Include="..\NovaShop.Infrastructure\NovaShop.Infrastructure.csproj" />
   </ItemGroup>
 
+  <!-- Temporary Render seed data — REMOVE after initial deployment -->
+  <ItemGroup>
+    <Content Update="Seed\translations.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="Seed\seed-users.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

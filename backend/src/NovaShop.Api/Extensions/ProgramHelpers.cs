@@ -13,6 +13,8 @@ using NovaShop.Api.RateLimiting;
 using NovaShop.Common.Models;
 using Prometheus;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.Configuration;
+using System.Text.Json;
 
 namespace NovaShop.Api.Extensions;
 
@@ -145,6 +147,10 @@ public static class ProgramHelpers
 
             // Seed categories and products (idempotent)
             SeedData(services);
+
+            // One-time Render database bootstrap (Translations + Users).
+            // Disabled by default. Enable with env var: Render__SeedDatabase=true
+            SeedRenderData(services, app.Configuration);
         }
 
         // OpenAPI and Scalar
@@ -288,6 +294,176 @@ public static class ProgramHelpers
             new Product { Name = "Baby Penguin Doll", Description = "An adorable knitted penguin in a winter hat. Made with ultra-soft baby-safe yarn.", Price = 249_900m, Stock = 25, ImageUrl = "https://picsum.photos/seed/penguin/600/600", CategoryId = babyCat.Id, Rating = 4.7 }
         );
         context.SaveChanges();
+    }
+
+    // ---- One-time Render database bootstrap — REMOVE after initial deployment ----
+    // When Render__SeedDatabase=true:
+    //   1. Seeds ALL Translations from Seed/translations.json (if table is empty)
+    //   2. Deletes ALL Users and reseeds from Seed/seed-users.json
+    // Disabled by default. Remove after initial Render deployment is verified.
+    private static void SeedRenderData(IServiceProvider services, IConfiguration config)
+    {
+        if (!config.GetValue<bool>("Render:SeedDatabase"))
+            return;
+
+        var context = services.GetRequiredService<NovaShopDbContext>();
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        var contentRoot = services.GetRequiredService<IWebHostEnvironment>().ContentRootPath;
+        var seedDir = Path.Combine(contentRoot, "Seed");
+
+        var translationsPath = Path.Combine(seedDir, "translations.json");
+        var usersPath = Path.Combine(seedDir, "seed-users.json");
+
+        if (!File.Exists(translationsPath) || !File.Exists(usersPath))
+        {
+            logger.LogWarning("Render seed enabled but seed files not found at {Path}. Skipping.", seedDir);
+            return;
+        }
+
+        // --- Load and validate seed data ---
+        var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+        var translations = JsonSerializer.Deserialize<List<SeedTranslation>>(File.ReadAllText(translationsPath), jsonOptions);
+        if (translations is null || translations.Count == 0)
+        {
+            logger.LogWarning("Render seed: translations.json is empty. Skipping.");
+            return;
+        }
+
+        var users = JsonSerializer.Deserialize<List<SeedUser>>(File.ReadAllText(usersPath), jsonOptions);
+        if (users is null || users.Count == 0)
+        {
+            logger.LogWarning("Render seed: seed-users.json is empty. Skipping.");
+            return;
+        }
+
+        // Validate required fields
+        var invalidTranslation = translations.FirstOrDefault(t => string.IsNullOrWhiteSpace(t.Key) || string.IsNullOrWhiteSpace(t.Locale) || string.IsNullOrWhiteSpace(t.Value));
+        if (invalidTranslation is not null)
+        {
+            logger.LogWarning("Render seed: translation record is missing required fields. Skipping.");
+            return;
+        }
+
+        var invalidUser = users.FirstOrDefault(u => string.IsNullOrWhiteSpace(u.Username) || string.IsNullOrWhiteSpace(u.Email) || string.IsNullOrWhiteSpace(u.PasswordHash));
+        if (invalidUser is not null)
+        {
+            logger.LogWarning("Render seed: user record is missing required fields. Skipping.");
+            return;
+        }
+
+        logger.LogWarning("RENDER SEED: Destructive database bootstrap starting. Users will be replaced. Translations will be seeded if empty.");
+
+        // --- Execute in transaction ---
+        using var transaction = context.Database.BeginTransaction();
+        try
+        {
+            // 1. Seed Translations (only if empty)
+            if (!context.Translations.Any())
+            {
+                var entities = translations.Select(t => new Translation
+                {
+                    Id = t.Id,
+                    Key = t.Key,
+                    Locale = t.Locale,
+                    Value = t.Value,
+                    Namespace = t.Namespace,
+                    Description = t.Description,
+                    IsActive = t.IsActive,
+                    CreatedAt = t.CreatedAt,
+                    UpdatedAt = t.UpdatedAt,
+                    CreatedBy = t.CreatedBy,
+                    UpdatedBy = t.UpdatedBy,
+                }).ToList();
+
+                context.Translations.AddRange(entities);
+                context.SaveChanges();
+
+                // Reset sequence to MAX(Id)
+                context.Database.ExecuteSqlRaw(
+                    "SELECT setval(pg_get_serial_sequence('\"Translations\"', 'Id'), COALESCE((SELECT MAX(\"Id\") FROM \"Translations\"), 1))");
+
+                logger.LogWarning("RENDER SEED: Translations seeded: {Count}", entities.Count);
+            }
+            else
+            {
+                logger.LogInformation("RENDER SEED: Translations table already has data ({Count} records). Skipping.", context.Translations.Count());
+            }
+
+            // 2. Delete all Users and reseed
+            var existingUsers = context.Users.ToList();
+            context.Users.RemoveRange(existingUsers);
+            context.SaveChanges();
+
+            var userEntities = users.Select(u => new User
+            {
+                Id = u.Id,
+                Username = u.Username,
+                Email = u.Email,
+                PasswordHash = u.PasswordHash,
+                FirstName = u.FirstName,
+                LastName = u.LastName,
+                PhoneNumber = u.PhoneNumber,
+                Address = u.Address,
+                City = u.City,
+                PostalCode = u.PostalCode,
+                Role = u.Role,
+                IsActive = u.IsActive,
+                CreatedAt = u.CreatedAt,
+            }).ToList();
+
+            context.Users.AddRange(userEntities);
+            context.SaveChanges();
+
+            // Reset sequence to MAX(Id)
+            context.Database.ExecuteSqlRaw(
+                "SELECT setval(pg_get_serial_sequence('\"Users\"', 'Id'), COALESCE((SELECT MAX(\"Id\") FROM \"Users\"), 1))");
+
+            logger.LogWarning("RENDER SEED: Users replaced: {Count}", userEntities.Count);
+
+            transaction.Commit();
+
+            logger.LogWarning("RENDER SEED: Complete. Translations: {TCount}, Users: {UCount}", translations.Count, users.Count);
+        }
+        catch (Exception ex)
+        {
+            transaction.Rollback();
+            logger.LogError(ex, "RENDER SEED: Failed. All changes rolled back.");
+            throw;
+        }
+    }
+
+    // ---- Temporary seed DTOs — REMOVE after initial deployment ----
+    private sealed class SeedTranslation
+    {
+        public int Id { get; set; }
+        public string Key { get; set; } = string.Empty;
+        public string Locale { get; set; } = string.Empty;
+        public string Value { get; set; } = string.Empty;
+        public string? Namespace { get; set; }
+        public string? Description { get; set; }
+        public bool IsActive { get; set; } = true;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public string? CreatedBy { get; set; }
+        public string? UpdatedBy { get; set; }
+    }
+
+    private sealed class SeedUser
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string PasswordHash { get; set; } = string.Empty;
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string PhoneNumber { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string PostalCode { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public bool IsActive { get; set; } = true;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 
     private static void MapEndpoints(WebApplication app)
