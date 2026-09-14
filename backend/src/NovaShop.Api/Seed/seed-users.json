@@ -12,7 +12,7 @@
     "postalCode": "1111111111",
     "role": "Customer",
     "isActive": true,
-    "createdAt": "2026-09-10 15:44:57.199648+03:30"
+    "createdAt": "2026-09-10T15:44:57.199648+03:30"
   },
   {
     "id": 2,
@@ -27,7 +27,7 @@
     "postalCode": "",
     "role": "Customer",
     "isActive": true,
-    "createdAt": "2026-09-11 00:18:17.639086+03:30"
+    "createdAt": "2026-09-11T00:18:17.639086+03:30"
   },
   {
     "id": 3,
@@ -42,7 +42,7 @@
     "postalCode": "",
     "role": "Customer",
     "isActive": true,
-    "createdAt": "2026-09-11 00:20:30.13755+03:30"
+    "createdAt": "2026-09-11T00:20:30.13755+03:30"
   },
   {
     "id": 4,
@@ -57,7 +57,7 @@
     "postalCode": "",
     "role": "Admin",
     "isActive": true,
-    "createdAt": "2026-09-11 00:22:34.979906+03:30"
+    "createdAt": "2026-09-11T00:22:34.979906+03:30"
   },
   {
     "id": 15,
@@ -72,6 +72,6 @@
     "postalCode": "",
     "role": "Admin",
     "isActive": true,
-    "createdAt": "2026-08-01 22:54:12.261981+03:30"
+    "createdAt": "2026-08-01T22:54:12.261981+03:30"
   }
 ]
