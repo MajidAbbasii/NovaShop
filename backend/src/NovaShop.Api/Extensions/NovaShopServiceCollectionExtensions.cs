@@ -126,6 +126,7 @@ public static class NovaShopServiceCollectionExtensions
                 tracing.AddAspNetCoreInstrumentation();
                 tracing.AddHttpClientInstrumentation();
                 tracing.AddSource("NovaShop");
+                tracing.AddSource("Npgsql");
             });
 
         // Only register the OTLP exporter when an endpoint is explicitly configured.
