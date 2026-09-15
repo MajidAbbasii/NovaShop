@@ -298,7 +298,7 @@ public static class ProgramHelpers
 
     // ---- One-time Render database bootstrap — REMOVE after initial deployment ----
     // When Render__SeedDatabase=true:
-    //   1. Seeds ALL Translations from Seed/translations.json (if table is empty)
+    //   1. Replaces ALL Translations from Seed/translations.json (delete + insert)
     //   2. Deletes ALL Users and reseeds from Seed/seed-users.json
     // Disabled by default. Remove after initial Render deployment is verified.
     private static void SeedRenderData(IServiceProvider services, IConfiguration config)
@@ -352,43 +352,39 @@ public static class ProgramHelpers
             return;
         }
 
-        logger.LogWarning("RENDER SEED: Destructive database bootstrap starting. Users will be replaced. Translations will be seeded if empty.");
+        logger.LogWarning("RENDER SEED: Destructive database bootstrap starting. Translations will be replaced. Users will be replaced.");
 
         // --- Execute in transaction ---
         using var transaction = context.Database.BeginTransaction();
         try
         {
-            // 1. Seed Translations (only if empty)
-            if (!context.Translations.Any())
+            // 1. Replace ALL Translations: delete existing, then insert from seed file
+            var deletedCount = context.Translations.ExecuteDelete();
+            logger.LogWarning("RENDER SEED: Deleted {Count} existing translations", deletedCount);
+
+            var entities = translations.Select(t => new Translation
             {
-                var entities = translations.Select(t => new Translation
-                {
-                    Id = t.Id,
-                    Key = t.Key,
-                    Locale = t.Locale,
-                    Value = t.Value,
-                    Namespace = t.Namespace,
-                    Description = t.Description,
-                    IsActive = t.IsActive,
-                    CreatedAt = t.CreatedAt.UtcDateTime,
-                    UpdatedAt = t.UpdatedAt.UtcDateTime,
-                    CreatedBy = t.CreatedBy,
-                    UpdatedBy = t.UpdatedBy,
-                }).ToList();
+                Id = t.Id,
+                Key = t.Key,
+                Locale = t.Locale,
+                Value = t.Value,
+                Namespace = t.Namespace,
+                Description = t.Description,
+                IsActive = t.IsActive,
+                CreatedAt = t.CreatedAt.UtcDateTime,
+                UpdatedAt = t.UpdatedAt.UtcDateTime,
+                CreatedBy = t.CreatedBy,
+                UpdatedBy = t.UpdatedBy,
+            }).ToList();
 
-                context.Translations.AddRange(entities);
-                context.SaveChanges();
+            context.Translations.AddRange(entities);
+            context.SaveChanges();
 
-                // Reset sequence to MAX(Id)
-                context.Database.ExecuteSqlRaw(
-                    "SELECT setval(pg_get_serial_sequence('\"Translations\"', 'Id'), COALESCE((SELECT MAX(\"Id\") FROM \"Translations\"), 1))");
+            // Reset sequence to MAX(Id)
+            context.Database.ExecuteSqlRaw(
+                "SELECT setval(pg_get_serial_sequence('\"Translations\"', 'Id'), COALESCE((SELECT MAX(\"Id\") FROM \"Translations\"), 1))");
 
-                logger.LogWarning("RENDER SEED: Translations seeded: {Count}", entities.Count);
-            }
-            else
-            {
-                logger.LogInformation("RENDER SEED: Translations table already has data ({Count} records). Skipping.", context.Translations.Count());
-            }
+            logger.LogWarning("RENDER SEED: Inserted {Count} translations", entities.Count);
 
             // 2. Delete all Users and reseed
             var existingUsers = context.Users.ToList();
