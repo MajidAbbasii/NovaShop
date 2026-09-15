@@ -38,6 +38,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Prometheus;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
+using Serilog;
+using Serilog.Context;
 
 namespace NovaShop.ApiGateway;
 
@@ -46,6 +48,14 @@ public class Program
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateSlimBuilder(args);
+
+        // Serilog — reads minimum levels from Serilog section in appsettings.json.
+        // Mirrors the API's logging setup for consistent request/exception logs.
+        // Enrich.FromLogContext ensures CorrelationId from LogContext appears in all entries.
+        builder.Host.UseSerilog((_, config) =>
+        {
+            config.Enrich.FromLogContext();
+        });
 
         // Local development default: listen on 5250.
         // In Docker/Render/CI, override with ASPNETCORE_HTTP_PORTS or ASPNETCORE_URLS.
@@ -223,6 +233,8 @@ public class Program
         app.UseRateLimiter();
         app.UseStaticFiles();
         app.UseMiddleware<CorrelationMiddleware>();
+        app.UseMiddleware<ExceptionHandlingMiddleware>();
+        app.UseSerilogRequestLogging();
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapHealthChecks("/health");
@@ -264,7 +276,51 @@ public class CorrelationMiddleware
             context.Request.Path,
             correlationId,
             context.Connection.RemoteIpAddress?.ToString() ?? "Unknown");
+        using var _ = LogContext.PushProperty("CorrelationId", correlationId);
         await _next(context);
+    }
+}
+
+/// <summary>
+/// Catches unhandled exceptions from downstream middleware/YARP, logs them with full
+/// stack trace and correlation ID, and returns a generic HTTP 500 ProblemDetails response.
+/// Does not intercept normal error responses (401, 403, 429, 502, 503) that are produced
+/// by middleware/YARP without throwing.
+/// </summary>
+public class ExceptionHandlingMiddleware
+{
+    private readonly RequestDelegate _next;
+    private readonly ILogger<ExceptionHandlingMiddleware> _logger;
+
+    public ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
+    {
+        _next = next;
+        _logger = logger;
+    }
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        try
+        {
+            await _next(context);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled exception {Method} {Path}",
+                context.Request.Method, context.Request.Path);
+
+            if (!context.Response.HasStarted)
+            {
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                context.Response.ContentType = "application/problem+json; charset=utf-8";
+                await context.Response.WriteAsJsonAsync(new
+                {
+                    type = "https://tools.ietf.org/html/rfc9110#section-15.6.1",
+                    title = "An unexpected error occurred.",
+                    status = 500
+                });
+            }
+        }
     }
 }
 
