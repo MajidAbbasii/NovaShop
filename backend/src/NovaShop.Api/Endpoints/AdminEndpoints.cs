@@ -1,8 +1,7 @@
 using MediatR;
-using Microsoft.EntityFrameworkCore;
+using NovaShop.Application.Features.Admin.Queries;
 using NovaShop.Application.Features.Orders.Commands;
 using NovaShop.Application.Features.Orders.Queries;
-using NovaShop.Infrastructure.Data;
 
 namespace NovaShop.Api.Endpoints;
 
@@ -47,44 +46,10 @@ public static class AdminEndpoints
         .WithName("AdminUpdateOrderStatus").RequireAuthorization("AdminOnly");
 
         // Dashboard stats
-        app.MapGet("/api/admin/dashboard", async (NovaShopDbContext db) =>
+        app.MapGet("/api/admin/dashboard", async (IMediator mediator) =>
         {
-            var now = DateTime.UtcNow;
-            var totalUsers = await db.Users.CountAsync();
-            var totalOrders = await db.Orders.CountAsync();
-            var pendingOrders = await db.Orders.CountAsync(o => o.Status == "Pending");
-            var revenue = await db.Orders
-                .Where(o => o.Status == "Delivered" || o.Status == "Shipped")
-                .SumAsync(o => o.TotalAmount);
-
-            var dailyRevenue = await db.Orders
-                .Where(o => o.CreatedAt >= now.AddDays(-7) && (o.Status == "Delivered" || o.Status == "Shipped"))
-                .GroupBy(o => o.CreatedAt.Date)
-                .Select(g => new { Date = g.Key, Revenue = g.Sum(o => o.TotalAmount) })
-                .OrderBy(x => x.Date)
-                .ToListAsync();
-
-            var recentOrders = await db.Orders
-                .OrderByDescending(o => o.CreatedAt)
-                .Take(5)
-                .Select(o => new
-                {
-                    o.Id,
-                    o.Status,
-                    o.TotalAmount,
-                    o.CreatedAt
-                })
-                .ToListAsync();
-
-            return Results.Ok(new
-            {
-                totalUsers,
-                totalOrders,
-                pendingOrders,
-                revenue,
-                dailyRevenue,
-                recentOrders
-            });
+            var result = await mediator.Send(new AdminDashboardQuery());
+            return Results.Ok(result);
         })
         .WithName("AdminDashboard").RequireAuthorization("AdminOnly");
 
@@ -98,48 +63,16 @@ public static class AdminEndpoints
                 })
                 .WithName("AdminGetInventory").RequireAuthorization("AdminOnly");
 
-                // list all reviews for moderation (admin)
-                app.MapGet("/api/admin/reviews", async (
-                    NovaShopDbContext db, int? rating = null, int pageNumber = 1, int pageSize = 20) =>
-                {
-                    var query = db.Reviews
-                        .Include(r => r.Product)
-                        .Include(r => r.User)
-                        .AsNoTracking();
+        // list all reviews for moderation (admin)
+        app.MapGet("/api/admin/reviews", async (
+            IMediator mediator, int? rating = null, int pageNumber = 1, int pageSize = 20) =>
+        {
+            var result = await mediator.Send(new AdminReviewsQuery(rating, pageNumber, pageSize));
+            return Results.Ok(result);
+        })
+        .WithName("AdminGetReviews").RequireAuthorization("AdminOnly");
 
-                    if (rating is >= 1 and <= 5)
-                        query = query.Where(r => r.Rating == rating.Value);
-
-                    var totalCount = await query.CountAsync();
-                    var items = await query
-                        .OrderByDescending(r => r.CreatedAt)
-                        .Skip((pageNumber - 1) * pageSize)
-                        .Take(pageSize)
-                        .Select(r => new
-                        {
-                            r.Id,
-                            r.ProductId,
-                            ProductName = r.Product.Name,
-                            r.UserId,
-                            UserName = r.User.Username,
-                            r.Rating,
-                            r.Comment,
-                            r.CreatedAt
-                        })
-                        .ToListAsync();
-
-                    return Results.Ok(new
-                    {
-                        items,
-                        totalCount,
-                        pageNumber,
-                        pageSize,
-                        totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
-                    });
-                })
-                .WithName("AdminGetReviews").RequireAuthorization("AdminOnly");
-
-                        // SMS notification log (admin)
+        // SMS notification log (admin)
         app.MapGet("/api/admin/notifications/sms", async (IMediator mediator,
             int? orderId = null, string? status = null,
             int pageNumber = 1, int pageSize = 50) =>
@@ -148,7 +81,8 @@ public static class AdminEndpoints
             var result = await mediator.Send(query);
             return Results.Ok(result);
         })
-        .WithName("AdminGetSmsNotifications").RequireAuthorization("AdminOnly");
+        .WithName("AdminGetSmsNotifications")
+        .RequireAuthorization("AdminOnly");
 
         return app;
     }

@@ -1,9 +1,8 @@
 using MediatR;
-using NovaShop.Application.Features.Orders.Commands;
-using NovaShop.Application.Features.Orders.Dtos;
-using Microsoft.EntityFrameworkCore;
+using NovaShop.Application.Features.Wallets.Queries;
 using NovaShop.Common.Models;
-using NovaShop.Infrastructure.Data;
+using NovaShop.Application.Features.Orders.Commands;
+using System.Security.Claims;
 
 namespace NovaShop.Api.Endpoints;
 
@@ -14,10 +13,7 @@ public static class WalletEndpoints
         // Get my wallet + transactions
         app.MapGet("/api/wallet", async (
             IMediator mediator,
-            HttpContext httpContext,
-            NovaShopDbContext context,
-            int pageNumber = 1,
-            int pageSize = 50) =>
+            HttpContext httpContext) =>
         {
             if (!PaymentPolicy.WalletEnabled)
                 return Results.Problem(
@@ -27,43 +23,8 @@ public static class WalletEndpoints
             var userId = GetUserId(httpContext);
             if (userId == null) return Results.Unauthorized();
 
-            var wallet = await context.Wallets
-                .Include(w => w.Transactions)
-                .FirstOrDefaultAsync(w => w.UserId == userId.Value);
-
-            if (wallet == null)
-            {
-                wallet = new NovaShop.Domain.Entities.Wallet { UserId = userId.Value, Balance = 0m };
-                context.Wallets.Add(wallet);
-                await context.SaveChangesAsync();
-            }
-
-            var dto = new WalletDto
-            {
-                Id = wallet.Id,
-                Balance = wallet.Balance,
-                Currency = wallet.Currency,
-                CreatedAt = wallet.CreatedAt,
-                UpdatedAt = wallet.UpdatedAt,
-                Transactions = wallet.Transactions
-                    .OrderByDescending(t => t.CreatedAt)
-                    .Take(pageSize)
-                    .Select(t => new WalletTransactionDto
-                    {
-                        Id = t.Id,
-                        Amount = t.Amount,
-                        BalanceBefore = t.BalanceBefore,
-                        BalanceAfter = t.BalanceAfter,
-                        Type = t.Type,
-                        Description = t.Description,
-                        Reference = t.Reference,
-                        OrderId = t.OrderId,
-                        Status = t.Status,
-                        CreatedAt = t.CreatedAt
-                    }).ToList()
-            };
-
-            return Results.Ok(dto);
+            var result = await mediator.Send(new GetMyWalletQuery(userId.Value, 50));
+            return Results.Ok(result);
         })
         .WithName("GetMyWallet")
         .RequireAuthorization();

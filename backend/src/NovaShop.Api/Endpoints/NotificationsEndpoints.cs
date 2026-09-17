@@ -1,6 +1,6 @@
-using Microsoft.EntityFrameworkCore;
-using NovaShop.Application.Features.Orders.Dtos;
-using NovaShop.Infrastructure.Data;
+using MediatR;
+using NovaShop.Application.Features.Notifications.Commands;
+using NovaShop.Application.Features.Notifications.Queries;
 
 namespace NovaShop.Api.Endpoints;
 
@@ -11,36 +11,15 @@ public static class NotificationsEndpoints
         // My in-app notifications
         app.MapGet("/api/notifications", async (
             HttpContext httpContext,
-            NovaShopDbContext context,
+            IMediator mediator,
             int pageNumber = 1,
             int pageSize = 50) =>
         {
             var userId = GetUserId(httpContext);
             if (userId == null) return Results.Unauthorized();
 
-            var query = context.AppNotifications
-                .Where(n => n.UserId == userId.Value)
-                .OrderByDescending(n => n.CreatedAt);
-
-            var total = await query.CountAsync();
-            var items = await query
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .Select(n => new AppNotificationDto
-                {
-                    Id = n.Id,
-                    OrderId = n.OrderId,
-                    CustomDollRequestId = n.CustomDollRequestId,
-                    Type = n.Type,
-                    Channel = n.Channel,
-                    Title = n.Title,
-                    Message = n.Message,
-                    IsRead = n.IsRead,
-                    CreatedAt = n.CreatedAt
-                })
-                .ToListAsync();
-
-            return Results.Ok(new { items, total, pageNumber, pageSize });
+            var result = await mediator.Send(new GetMyNotificationsQuery(userId.Value, pageNumber, pageSize));
+            return Results.Ok(new { items = result.Items, total = result.Total, pageNumber = result.PageNumber, pageSize = result.PageSize });
         })
         .WithName("GetMyNotifications")
         .RequireAuthorization();
@@ -49,18 +28,13 @@ public static class NotificationsEndpoints
         app.MapPost("/api/notifications/{id}/read", async (
             int id,
             HttpContext httpContext,
-            NovaShopDbContext context) =>
+            IMediator mediator) =>
         {
             var userId = GetUserId(httpContext);
             if (userId == null) return Results.Unauthorized();
 
-            var notification = await context.AppNotifications
-                .FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId.Value);
-            if (notification == null) return Results.NotFound();
-
-            notification.IsRead = true;
-            notification.ReadAt = DateTime.UtcNow;
-            await context.SaveChangesAsync();
+            var result = await mediator.Send(new MarkNotificationReadCommand(id, userId.Value));
+            if (!result) return Results.NotFound();
             return Results.Ok();
         })
         .WithName("MarkNotificationRead")
@@ -69,21 +43,13 @@ public static class NotificationsEndpoints
         // Mark all read
         app.MapPost("/api/notifications/read-all", async (
             HttpContext httpContext,
-            NovaShopDbContext context) =>
+            IMediator mediator) =>
         {
             var userId = GetUserId(httpContext);
             if (userId == null) return Results.Unauthorized();
 
-            var unread = await context.AppNotifications
-                .Where(n => n.UserId == userId.Value && !n.IsRead)
-                .ToListAsync();
-            foreach (var n in unread)
-            {
-                n.IsRead = true;
-                n.ReadAt = DateTime.UtcNow;
-            }
-            await context.SaveChangesAsync();
-            return Results.Ok(new { updated = unread.Count });
+            var count = await mediator.Send(new MarkAllNotificationsReadCommand(userId.Value));
+            return Results.Ok(new { updated = count });
         })
         .WithName("MarkAllNotificationsRead")
         .RequireAuthorization();
@@ -91,14 +57,13 @@ public static class NotificationsEndpoints
         // Unread count (for the header bell)
         app.MapGet("/api/notifications/unread-count", async (
             HttpContext httpContext,
-            NovaShopDbContext context) =>
+            IMediator mediator) =>
         {
             var userId = GetUserId(httpContext);
             if (userId == null) return Results.Unauthorized();
 
-            var count = await context.AppNotifications
-                .CountAsync(n => n.UserId == userId.Value && !n.IsRead);
-            return Results.Ok(new { count });
+            var result = await mediator.Send(new GetUnreadNotificationCountQuery(userId.Value));
+            return Results.Ok(new { count = result.Count });
         })
         .WithName("GetUnreadNotificationCount")
         .RequireAuthorization();

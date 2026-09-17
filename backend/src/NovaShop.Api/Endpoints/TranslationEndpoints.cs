@@ -1,10 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using NovaShop.Application.Caching;
 using NovaShop.Application.Services;
-using NovaShop.Domain.Entities;
-using NovaShop.Infrastructure.Data;
 
 namespace NovaShop.Api.Endpoints;
 
@@ -82,97 +78,6 @@ public static class TranslationEndpoints
         })
         .WithName("AdminDeleteTranslation");
 
-        // ---- Temporary bulk import — REMOVE after migration is complete ----
-        // Restores the full Translations table on Render from a JSON export.
-        // Accepts a flat array of records with explicit IDs; skips existing Key+Locale
-        // and ID conflicts; resets the PostgreSQL identity sequence after insert.
-        admin.MapPost("/import", async (
-            List<TranslationImportRecord> records,
-            NovaShopDbContext db,
-            ICacheService cache,
-            CancellationToken ct) =>
-        {
-            if (records.Count is 0 or > 5000)
-                return Results.BadRequest(new { error = "Provide 1-5000 records" });
-
-            // Load existing Key+Locale pairs and IDs in one query
-            var existing = await db.Translations
-                .Select(t => new { t.Key, t.Locale, t.Id })
-                .ToListAsync(ct);
-            var existingKeyLocales = new HashSet<string>(existing.Select(t => $"{t.Key}|{t.Locale}"));
-            var existingIds = new HashSet<int>(existing.Select(t => t.Id));
-
-            var now = DateTime.UtcNow;
-            var toAdd = new List<Translation>();
-            var skipped = 0;
-            var failed = 0;
-
-            foreach (var r in records)
-            {
-                if (string.IsNullOrWhiteSpace(r.Key) || string.IsNullOrWhiteSpace(r.Locale) || string.IsNullOrWhiteSpace(r.Value))
-                { failed++; continue; }
-
-                if (existingKeyLocales.Contains($"{r.Key}|{r.Locale}"))
-                { skipped++; continue; }
-
-                if (r.Id > 0 && existingIds.Contains(r.Id))
-                { skipped++; continue; }
-
-                toAdd.Add(new Translation
-                {
-                    Id = r.Id,
-                    Key = r.Key.Trim(),
-                    Locale = r.Locale.Trim(),
-                    Value = r.Value,
-                    Namespace = r.Namespace,
-                    Description = r.Description,
-                    IsActive = r.IsActive,
-                    CreatedAt = r.CreatedAt == default ? now : r.CreatedAt,
-                    UpdatedAt = r.UpdatedAt == default ? now : r.UpdatedAt,
-                    CreatedBy = r.CreatedBy ?? "migration",
-                    UpdatedBy = r.UpdatedBy ?? "migration",
-                });
-            }
-
-            if (toAdd.Count > 0)
-            {
-                await db.Translations.AddRangeAsync(toAdd, ct);
-                await db.SaveChangesAsync(ct);
-
-                // Reset PostgreSQL identity sequence to MAX(Id) to prevent future ID conflicts
-                await db.Database.ExecuteSqlRawAsync(
-                    """SELECT setval(pg_get_serial_sequence('"Translations"', 'Id'), COALESCE((SELECT MAX("Id") FROM "Translations"), 1))""",
-                    ct);
-            }
-
-            // Invalidate translation cache for all locales
-            const string cachePrefix = "translations:loc:";
-            await cache.RemoveAsync(cachePrefix + "fa");
-            await cache.RemoveAsync(cachePrefix + "en");
-            await cache.RemoveAsync(cachePrefix + "ar");
-
-            return Results.Ok(new { received = records.Count, inserted = toAdd.Count, skipped, failed });
-        })
-        .WithName("AdminImportTranslations");
-
         return app;
     }
-}
-
-/// <summary>
-/// Temporary DTO for bulk translation import. REMOVE after migration is complete.
-/// </summary>
-public record TranslationImportRecord
-{
-    public int Id { get; init; }
-    public string Key { get; init; } = string.Empty;
-    public string Locale { get; init; } = string.Empty;
-    public string Value { get; init; } = string.Empty;
-    public string? Namespace { get; init; }
-    public string? Description { get; init; }
-    public bool IsActive { get; init; } = true;
-    public DateTime CreatedAt { get; init; }
-    public DateTime UpdatedAt { get; init; }
-    public string? CreatedBy { get; init; }
-    public string? UpdatedBy { get; init; }
 }

@@ -489,7 +489,7 @@ public static class ProgramHelpers
         app.MapTranslationEndpoints();
         app.MapShippingEndpoints();
         // Temporary — REMOVE after migration: app.MapDatabaseAdminEndpoints();
-        app.MapDatabaseAdminEndpoints();
+        //app.MapDatabaseAdminEndpoints();
 
     }
 }

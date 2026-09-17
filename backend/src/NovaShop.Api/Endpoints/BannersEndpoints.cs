@@ -1,6 +1,6 @@
-using Microsoft.EntityFrameworkCore;
-using NovaShop.Domain.Entities;
-using NovaShop.Infrastructure.Data;
+using MediatR;
+using NovaShop.Application.Features.Banners.Commands;
+using NovaShop.Application.Features.Banners.Queries;
 
 namespace NovaShop.Api.Endpoints;
 
@@ -9,102 +9,44 @@ public static class BannersEndpoints
     public static IEndpointRouteBuilder MapBannersEndpoints(this IEndpointRouteBuilder app)
     {
         // Public: active banners for the storefront hero slider
-        app.MapGet("/api/banners", async (NovaShopDbContext db) =>
+        app.MapGet("/api/banners", async (IMediator mediator) =>
         {
-            var banners = await db.Banners
-                .Where(b => b.IsActive)
-                .OrderBy(b => b.SortOrder)
-                .ThenBy(b => b.Id)
-                .Select(b => new BannerDto
-                {
-                    Id = b.Id,
-                    Title = b.Title,
-                    Subtitle = b.Subtitle,
-                    ImageUrl = b.ImageUrl,
-                    LinkUrl = b.LinkUrl,
-                    SortOrder = b.SortOrder
-                })
-                .ToListAsync();
-
-            return Results.Ok(new { items = banners });
+            var result = await mediator.Send(new GetActiveBannersQuery());
+            return Results.Ok(new { items = result });
         })
         .WithName("GetActiveBanners")
         .AllowAnonymous();
 
         // Admin: list all banners (any state)
-        app.MapGet("/api/admin/banners", async (NovaShopDbContext db) =>
+        app.MapGet("/api/admin/banners", async (IMediator mediator) =>
         {
-            var banners = await db.Banners
-                .OrderBy(b => b.SortOrder)
-                .ThenBy(b => b.Id)
-                .Select(b => new BannerDto
-                {
-                    Id = b.Id,
-                    Title = b.Title,
-                    Subtitle = b.Subtitle,
-                    ImageUrl = b.ImageUrl,
-                    LinkUrl = b.LinkUrl,
-                    IsActive = b.IsActive,
-                    SortOrder = b.SortOrder,
-                    CreatedAt = b.CreatedAt,
-                    UpdatedAt = b.UpdatedAt
-                })
-                .ToListAsync();
-
-            return Results.Ok(new { items = banners });
+            var result = await mediator.Send(new GetAllBannersQuery());
+            return Results.Ok(new { items = result });
         })
         .WithName("AdminGetBanners")
         .RequireAuthorization("AdminOnly");
 
         // Admin: create
-        app.MapPost("/api/admin/banners", async (BannerUpsertRequest req, NovaShopDbContext db) =>
+        app.MapPost("/api/admin/banners", async (CreateBannerCommand command, IMediator mediator) =>
         {
-            var banner = new Banner
-            {
-                Title = req.Title.Trim(),
-                Subtitle = (req.Subtitle ?? string.Empty).Trim(),
-                ImageUrl = (req.ImageUrl ?? string.Empty).Trim(),
-                LinkUrl = (req.LinkUrl ?? string.Empty).Trim(),
-                IsActive = req.IsActive,
-                SortOrder = req.SortOrder
-            };
-
-            db.Banners.Add(banner);
-            await db.SaveChangesAsync();
-            return Results.Created($"/api/admin/banners/{banner.Id}", banner.Id);
+            return await mediator.Send(command);
         })
         .WithName("CreateBanner")
         .RequireAuthorization("AdminOnly");
 
         // Admin: update
-        app.MapPut("/api/admin/banners/{id}", async (int id, BannerUpsertRequest req, NovaShopDbContext db) =>
+        app.MapPut("/api/admin/banners/{id}", async (int id, UpdateBannerCommand command, IMediator mediator) =>
         {
-            var banner = await db.Banners.FindAsync(id);
-            if (banner == null) return Results.NotFound();
-
-            banner.Title = req.Title.Trim();
-            banner.Subtitle = (req.Subtitle ?? string.Empty).Trim();
-            banner.ImageUrl = (req.ImageUrl ?? string.Empty).Trim();
-            banner.LinkUrl = (req.LinkUrl ?? string.Empty).Trim();
-            banner.IsActive = req.IsActive;
-            banner.SortOrder = req.SortOrder;
-            banner.UpdatedAt = DateTime.UtcNow;
-
-            await db.SaveChangesAsync();
-            return Results.NoContent();
+            command = command with { Id = id };
+            return await mediator.Send(command);
         })
         .WithName("UpdateBanner")
         .RequireAuthorization("AdminOnly");
 
         // Admin: delete
-        app.MapDelete("/api/admin/banners/{id}", async (int id, NovaShopDbContext db) =>
+        app.MapDelete("/api/admin/banners/{id}", async (int id, IMediator mediator) =>
         {
-            var banner = await db.Banners.FindAsync(id);
-            if (banner == null) return Results.NotFound();
-
-            db.Banners.Remove(banner);
-            await db.SaveChangesAsync();
-            return Results.NoContent();
+            return await mediator.Send(new DeleteBannerCommand(id));
         })
         .WithName("DeleteBanner")
         .RequireAuthorization("AdminOnly");
@@ -112,24 +54,3 @@ public static class BannersEndpoints
         return app;
     }
 }
-
-public class BannerDto
-{
-    public int Id { get; set; }
-    public string Title { get; set; } = string.Empty;
-    public string Subtitle { get; set; } = string.Empty;
-    public string ImageUrl { get; set; } = string.Empty;
-    public string LinkUrl { get; set; } = string.Empty;
-    public bool IsActive { get; set; }
-    public int SortOrder { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime? UpdatedAt { get; set; }
-}
-
-public record BannerUpsertRequest(
-    string Title,
-    string? Subtitle,
-    string? ImageUrl,
-    string? LinkUrl,
-    bool IsActive = true,
-    int SortOrder = 0);
