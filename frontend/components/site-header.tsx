@@ -105,7 +105,7 @@ export function SiteHeader() {
           <Button
             variant="ghost"
             size="icon"
-            className="shrink-0 lg:hidden"
+            className="lg:hidden"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label={mobileOpen ? t('header.closeMenu') : t('header.openMenu')}
             aria-expanded={mobileOpen}
@@ -114,7 +114,7 @@ export function SiteHeader() {
           </Button>
 
           {/* Logo */}
-          <Link href="/" className="flex shrink-0 items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-sm">
               <Store className="size-5" />
             </div>
@@ -148,7 +148,7 @@ export function SiteHeader() {
           </form>
 
           {/* Actions */}
-          <div className="ms-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
+          <div className="ms-auto flex items-center gap-0.5 sm:gap-1 min-w-0">
             {/* Notifications */}
             {isAuthenticated && (
               <Button
