@@ -184,9 +184,10 @@ export default function ProductDetailClient({
         {/* Product card */}
         <Card className="overflow-hidden border-0 rounded-2xl shadow-md">
           <CardContent className={`grid gap-8 p-6 lg:grid-cols-2 ${dir === 'rtl' ? 'lg:direction-rtl' : ''}`}>
-            <ProductGallery images={images} productName={product.name} />
-
-            <div className={`flex flex-col gap-4 ${dir === 'rtl' ? 'text-right' : ''}`}>
+            <div className="min-w-0">
+              <ProductGallery images={images} productName={product.name} />
+            </div>
+            <div className={`flex flex-col gap-4 min-w-0 ${dir === 'rtl' ? 'text-right' : ''}`}>
               <div>
                 <h1 className="text-2xl font-bold">{product.name}</h1>
                 {productCategory && (
@@ -299,7 +300,7 @@ export default function ProductDetailClient({
                 </div>
               )}
 
-              <div className={`flex gap-3 pt-2 ${dir === 'rtl' ? 'flex-row-reverse' : ''}`}>
+              <div className={`flex flex-col sm:flex-row gap-3 pt-2 ${dir === 'rtl' ? 'sm:flex-row-reverse' : ''}`}>
                 <div className="flex-1">
                   <AddToCartButton
                     productId={product.id}

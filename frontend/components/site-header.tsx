@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Bell, X, Menu, Heart, Search, Store, Camera, LogIn, CircleUser } from 'lucide-react';
+import { ShoppingCart, Bell, Menu, Heart, Search, Store, Camera, LogIn, CircleUser, House, Package, Tag, Info, X } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
 import { useWishlist } from '@/lib/wishlist-context';
 import { useLocale } from '@/lib/locale-context';
@@ -14,6 +14,7 @@ import { useAuth } from '@/lib/auth-context';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { cn } from '@/lib/utils';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from '@/components/ui/sheet';
 
 // Shared badge classes for icon buttons (notification / wishlist / cart).
 const iconBadge =
@@ -56,7 +57,7 @@ export function SiteHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { t, dir } = useLocale();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user, signOut } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const unreadCount = useUnreadNotificationCount();
@@ -70,6 +71,25 @@ export function SiteHeader() {
     router.push(q ? `/products?search=${encodeURIComponent(q)}` : '/products');
   };
 
+  const mobileNavLinks = [
+    { href: '/', labelKey: 'shop.home', icon: House },
+    { href: '/products', labelKey: 'shop.title', icon: Package },
+    { href: '/cart', labelKey: 'cart.title', icon: ShoppingCart },
+  ];
+
+  const mobileAccountLinks = isAuthenticated
+    ? [
+        { href: '/profile', labelKey: 'profile.title', icon: CircleUser },
+        { href: '/orders', labelKey: 'footer.orders', icon: Package },
+        { href: '/wishlist', labelKey: 'wishlist.title', icon: Heart },
+        { href: '/notifications', labelKey: 'notifications.title', icon: Bell },
+      ]
+    : [
+        { href: '/login', labelKey: 'header.login', icon: LogIn },
+      ];
+
+  const handleNavClick = () => setMobileOpen(false);
+
   return (
     <>
       {/* Announcement bar */}
@@ -80,7 +100,7 @@ export function SiteHeader() {
       </div>
       <header className="sticky top-0 z-40 w-full border-b border-border/70 bg-card/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/80">
         {/* Top bar: logo | search | actions */}
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-3 sm:gap-4 sm:px-6 lg:px-8">
+                  <div className="mx-auto flex h-16 max-w-7xl min-w-0 items-center gap-2 px-3 sm:gap-4 sm:px-6 lg:px-8">
           {/* Mobile menu button */}
           <Button
             variant="ghost"
@@ -88,6 +108,7 @@ export function SiteHeader() {
             className="shrink-0 lg:hidden"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label={mobileOpen ? t('header.closeMenu') : t('header.openMenu')}
+            aria-expanded={mobileOpen}
           >
             {mobileOpen ? <X className="size-5" /> : <Menu className="size-5" />}
           </Button>
@@ -235,6 +256,101 @@ export function SiteHeader() {
             )}
           </div>
         </div>
+
+        {/* Mobile navigation drawer */}
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetContent
+            side={dir === 'rtl' ? 'right' : 'left'}
+            className="z-[60] flex w-[280px] max-w-[80vw] flex-col p-0"
+          >
+            {/* Header with close button */}
+            <SheetHeader className="border-b border-border/70 px-4 py-3">
+              <SheetTitle className="flex items-center gap-2">
+                {isAuthenticated && user ? (
+                  <>
+                    <div className="flex size-8 items-center justify-center rounded-full bg-primary/10">
+                      <span className="text-xs font-bold text-primary">
+                        {user.username ? user.username.slice(0, 1).toUpperCase() : ''}
+                      </span>
+                    </div>
+                    <span>{user.username || t('profile.title')}</span>
+                  </>
+                ) : (
+                  t('header.openMenu')
+                )}
+              </SheetTitle>
+              <SheetClose asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-3"
+                  style={{ [dir === 'rtl' ? 'left' : 'right']: '0.75rem' }}
+                  aria-label={t('common.close')}
+                >
+                  <X className="size-5" />
+                </Button>
+              </SheetClose>
+            </SheetHeader>
+
+            {/* Navigation links */}
+            <nav className="flex-1 overflow-y-auto" aria-label={t('header.openMenu')}>
+              <ul className="space-y-1 p-2">
+                {mobileNavLinks.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      onClick={handleNavClick}
+                      className={cn(
+                        'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                        pathname === link.href
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      )}
+                    >
+                      <link.icon className="size-5 shrink-0" />
+                      {t(link.labelKey)}
+                    </Link>
+                  </li>
+                ))}
+                {mobileAccountLinks.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      onClick={handleNavClick}
+                      className={cn(
+                        'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                        pathname === link.href
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      )}
+                    >
+                      <link.icon className="size-5 shrink-0" />
+                      {t(link.labelKey)}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+
+            {/* Logout button for authenticated users */}
+            {isAuthenticated && user && (
+              <div className="border-t border-border/70 p-2">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3 text-sm font-medium text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => {
+                    signOut();
+                    setMobileOpen(false);
+                    router.push('/login');
+                  }}
+                >
+                  <LogIn className="size-5 shrink-0" />
+                  {t('profile.logout')}
+                </Button>
+              </div>
+            )}
+          </SheetContent>
+        </Sheet>
       </header>
     </>
   );

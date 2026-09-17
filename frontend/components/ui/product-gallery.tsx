@@ -54,10 +54,10 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 w-full">
       {/* Main image */}
       <div
-        className="group relative aspect-square overflow-hidden rounded-xl bg-muted"
+        className="group relative aspect-square w-full overflow-hidden rounded-xl bg-muted"
         role="img"
         aria-label={productName}
         tabIndex={0}
